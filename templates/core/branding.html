@@ -1,0 +1,48 @@
+{% extends "base_staff.html" %}
+{% block title %}Logos & branding{% endblock %}
+{% block page_title %}Logos &amp; branding{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <h1>Logos &amp; branding</h1>
+  <div class="d-flex gap-2"><a href="{% url 'website:builder' %}" class="btn btn-outline-secondary"><i class="bi bi-palette"></i> Theme colours &amp; fonts</a>
+    <a href="/" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up-right"></i> View website</a></div>
+</div>
+<div class="row g-3">
+  {% for slot in slots %}
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header">{{ slot.kind.label }}</div><div class="card-body d-flex flex-column">
+      {% if slot.asset %}
+        <div class="logo-preview {% if slot.kind == 'logo-light' %}dark{% else %}checker{% endif %} mb-2"><img src="{{ slot.asset.url }}" alt="{{ slot.kind.label }}"></div>
+        <div class="small text-body-secondary mb-2">{{ slot.asset.filename }} · {{ slot.asset.size|filesizeformat }} · updated {{ slot.asset.updated_at|date:"d M Y H:i" }}{% if slot.asset.updated_by %} by {{ slot.asset.updated_by }}{% endif %}</div>
+      {% else %}
+        <div class="logo-preview {% if slot.kind == 'logo-light' %}dark text-white-50{% else %}checker text-body-secondary{% endif %} mb-2 small">No image yet</div>
+      {% endif %}
+      <p class="small text-body-secondary">{{ slot.help }}</p>
+      <form method="post" enctype="multipart/form-data" class="mt-auto">{% csrf_token %}
+        <input type="hidden" name="kind" value="{{ slot.kind }}">
+        <input type="file" name="file" class="form-control {% if slot.error %}is-invalid{% endif %}" required
+               accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/x-icon,.ico,.svg">
+        {% if slot.error %}<div class="invalid-feedback d-block">{{ slot.error }}</div>{% endif %}
+        <button class="btn btn-primary w-100 mt-2"><i class="bi bi-upload"></i> {% if slot.asset %}Replace{% else %}Upload{% endif %}</button>
+      </form>
+      {% if slot.asset %}
+      <form method="post" class="mt-2" onsubmit="return confirm('Remove this image?')">{% csrf_token %}
+        <input type="hidden" name="kind" value="{{ slot.kind }}"><input type="hidden" name="action" value="remove">
+        <button class="btn btn-link btn-sm text-danger p-0">Remove</button>
+      </form>
+      {% endif %}
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+<div class="card mt-3"><div class="card-body">
+  <form method="post" class="d-flex flex-wrap align-items-center gap-3">{% csrf_token %}
+    <input type="hidden" name="action" value="toggle_name">
+    <div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="logo_show_name" id="show_name" value="1" {% if hotel_obj.logo_show_name %}checked{% endif %}>
+      <label class="form-check-label" for="show_name">Show the hotel name (“{{ hotel_obj.name }}”) next to the logo</label></div>
+    <button class="btn btn-sm btn-outline-primary">Save</button>
+    <span class="small text-body-secondary">Turn this off if your logo already includes the name. Change the name itself under {% if nav.admin %}<a href="{% url 'core:settings' %}">Settings</a>{% else %}Settings{% endif %}.</span>
+  </form>
+</div></div>
+<p class="small text-body-secondary mt-3 mb-0"><i class="bi bi-info-circle"></i> Logos are stored in the database, so they survive redeploys on hosts without permanent file storage. Max 2&nbsp;MB per logo, 512&nbsp;KB for the favicon.</p>
+{% endblock %}

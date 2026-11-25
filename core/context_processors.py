@@ -1,6 +1,6 @@
 from django.conf import settings
 
-from .models import HotelSettings
+from .models import BrandAsset, HotelSettings
 
 
 def hotel(request):
@@ -28,6 +28,7 @@ def hotel(request):
         unread = ContactMessage.objects.filter(is_read=False).count()
     return {
         "hotel": HotelSettings.load(),
+        "brand": BrandAsset.urls(),
         "site": WebsiteContent.load(),
         "unread_messages": unread,
         "nav_pages": [] if request.path.startswith("/staff/") else list(

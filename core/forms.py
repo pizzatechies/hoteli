@@ -49,6 +49,12 @@ class HotelSettingsForm(BootstrapMixin, forms.ModelForm):
         }
 
 
+class LogoUploadForm(forms.Form):
+    file = forms.FileField(widget=forms.ClearableFileInput(attrs={
+        "class": "form-control", "accept": "image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/x-icon,.ico,.svg",
+    }))
+
+
 class DateRangeForm(BootstrapMixin, forms.Form):
     start = forms.DateField(widget=DateInput())
     end = forms.DateField(widget=DateInput())

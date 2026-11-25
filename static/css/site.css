@@ -22,7 +22,9 @@ a { color: var(--brand); }
 .sec-brand .eyebrow, .sec-dark .eyebrow { color: rgba(255,255,255,.85); }
 .sec-brand .btn-brand { background: #fff; color: var(--brand); }
 .sec-dark .card, .sec-brand .card { color: var(--ink); }
-.site-logo { height: 36px; width: auto; }
+.site-logo { height: 48px; width: auto; max-width: 240px; object-fit: contain; }
+.footer-logo { height: 52px; width: auto; max-width: 240px; object-fit: contain; }
+.logo-badge { background: #fff; border-radius: 8px; padding: 4px 8px; display: inline-flex; }
 .gallery-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 14px; }
 .feature-icon { width: 52px; height: 52px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center;
   background: var(--brand-soft); color: var(--brand); font-size: 1.5rem; }

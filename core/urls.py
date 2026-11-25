@@ -10,5 +10,6 @@ urlpatterns = [
     path("reports/", views.report_view, name="reports"),
     path("reports/export/<str:kind>/", views.report_export, name="report_export"),
     path("settings/", views.settings_view, name="settings"),
+    path("branding/", views.branding, name="branding"),
     path("audit-log/", views.audit_log, name="audit_log"),
 ]

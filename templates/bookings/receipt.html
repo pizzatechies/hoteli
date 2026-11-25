@@ -6,7 +6,7 @@
 @media print{body{background:#fff}.slip{margin:0;width:auto}.no-print{display:none}}</style></head>
 <body><div class="slip">
   <div class="no-print c" style="margin-bottom:10px"><button onclick="window.print()">Print</button></div>
-  <div class="c"><strong>{{ hotel.name|upper }}</strong><br>{{ hotel.address }}<br>{{ hotel.phone }}{% if hotel.kra_pin %}<br>PIN {{ hotel.kra_pin }}{% endif %}</div>
+  <div class="c">{% if brand.logo %}<img src="{{ brand.logo }}" alt="" style="max-height:48px;max-width:200px"><br>{% endif %}<strong>{{ hotel.name|upper }}</strong><br>{{ hotel.address }}<br>{{ hotel.phone }}{% if hotel.kra_pin %}<br>PIN {{ hotel.kra_pin }}{% endif %}</div>
   <hr>
   <div class="c"><strong>{% if payment.kind == "REFUND" %}REFUND{% else %}PAYMENT RECEIPT{% endif %}</strong>{% if payment.is_void %}<br>*** VOID ***{% endif %}</div>
   <hr>

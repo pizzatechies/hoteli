@@ -4,7 +4,7 @@
 .c{text-align:center}.row{display:flex;justify-content:space-between;gap:8px}hr{border:none;border-top:1px dashed #999}@media print{body{background:#fff}.slip{margin:0;width:auto}.no-print{display:none}}</style></head>
 <body><div class="slip">
   <div class="no-print c" style="margin-bottom:10px"><button onclick="window.print()">Print</button></div>
-  <div class="c"><strong>{{ hotel.name|upper }}</strong><br>{{ order.get_outlet_display }}<br>{{ hotel.phone }}</div><hr>
+  <div class="c">{% if brand.logo %}<img src="{{ brand.logo }}" alt="" style="max-height:48px;max-width:200px"><br>{% endif %}<strong>{{ hotel.name|upper }}</strong><br>{{ order.get_outlet_display }}<br>{{ hotel.phone }}</div><hr>
   <div class="row"><span>Bill</span><span>{{ order.number }}</span></div>
   <div class="row"><span>Date</span><span>{{ order.created_at|date:"d/m/Y H:i" }}</span></div>
   {% if order.table_number %}<div class="row"><span>Table</span><span>{{ order.table_number }}</span></div>{% endif %}

@@ -7,6 +7,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 SETTINGS_CACHE_KEY = "hotel_settings_v1"
+BRAND_CACHE_KEY = "hotel_brand_assets_v1"
 
 
 class HotelSettings(models.Model):
@@ -59,6 +60,10 @@ class HotelSettings(models.Model):
     require_guest_id_at_checkin = models.BooleanField(
         default=True, help_text="Require an ID/passport number before check-in."
     )
+    logo_show_name = models.BooleanField(
+        "Show hotel name beside the logo", default=True,
+        help_text="Turn off if your logo already contains the hotel name.",
+    )
     invoice_footer = models.TextField(
         blank=True, default="Thank you for staying with us. Karibu tena!"
     )
@@ -99,6 +104,52 @@ class HotelSettings(models.Model):
         vat = (net * self.vat_rate / Decimal(100)).quantize(Decimal("0.01"))
         levy = gross - net - vat
         return {"net": net, "vat": vat, "levy": levy, "gross": gross}
+
+
+class BrandAsset(models.Model):
+    """Logo files, stored in the database so they survive redeploys on hosts without persistent disks."""
+
+    class Kind(models.TextChoices):
+        LOGO = "logo", "Main logo"
+        LOGO_LIGHT = "logo-light", "Logo for dark backgrounds"
+        FAVICON = "favicon", "Browser tab icon (favicon)"
+
+    kind = models.CharField(max_length=20, choices=Kind.choices, unique=True)
+    filename = models.CharField(max_length=150, blank=True)
+    content_type = models.CharField(max_length=40)
+    data = models.BinaryField()
+    size = models.PositiveIntegerField(default=0)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.get_kind_display()
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        cache.delete(BRAND_CACHE_KEY)
+
+    def delete(self, *args, **kwargs):
+        result = super().delete(*args, **kwargs)
+        cache.delete(BRAND_CACHE_KEY)
+        return result
+
+    @property
+    def url(self):
+        from django.urls import reverse
+
+        return f"{reverse('brand_asset_public', args=[self.kind])}?v={int(self.updated_at.timestamp())}"
+
+    @classmethod
+    def urls(cls):
+        """{'logo': url, 'logo_light': url, 'favicon': url} for the assets that exist (cached)."""
+        urls = cache.get(BRAND_CACHE_KEY)
+        if urls is None:
+            urls = {a.kind.replace("-", "_"): a.url for a in cls.objects.defer("data")}
+            cache.set(BRAND_CACHE_KEY, urls, 300)
+        return urls
 
 
 class AuditLog(models.Model):

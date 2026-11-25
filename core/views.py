@@ -5,8 +5,9 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
-from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.core.exceptions import ValidationError
+from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -19,8 +20,9 @@ from mpesa.models import C2BTransaction, MpesaTransaction
 from rooms.models import Room
 
 from . import reports
-from .forms import DateRangeForm, HotelSettingsForm
-from .models import AuditLog, HotelSettings, log_action
+from .branding import read_logo
+from .forms import DateRangeForm, HotelSettingsForm, LogoUploadForm
+from .models import AuditLog, BrandAsset, HotelSettings, log_action
 
 
 def _month_start(day):
@@ -223,6 +225,71 @@ def audit_log(request):
         qs = qs.filter(action__startswith=action)
     page = Paginator(qs, 50).get_page(request.GET.get("page"))
     return render(request, "core/audit_log.html", {"page": page, "q": q, "action": action})
+
+
+@role_required(*P.MANAGEMENT)
+def branding(request):
+    hotel, _ = HotelSettings.objects.get_or_create(pk=1)
+    assets = {a.kind: a for a in BrandAsset.objects.defer("data")}
+    errors = {}
+    if request.method == "POST":
+        kind = request.POST.get("kind", "")
+        action = request.POST.get("action", "upload")
+        if action == "toggle_name":
+            hotel.logo_show_name = bool(request.POST.get("logo_show_name"))
+            hotel.save()
+            messages.success(request, "Logo display updated.")
+            return redirect("core:branding")
+        if kind not in BrandAsset.Kind.values:
+            raise Http404()
+        label = BrandAsset.Kind(kind).label
+        if action == "remove":
+            BrandAsset.objects.filter(kind=kind).delete()
+            log_action(request.user, "branding.remove", None, f"Removed {label.lower()}")
+            messages.success(request, f"{label} removed.")
+            return redirect("core:branding")
+        form = LogoUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            upload = form.cleaned_data["file"]
+            try:
+                content_type, data = read_logo(upload, kind)
+            except ValidationError as exc:
+                errors[kind] = exc.messages[0]
+            else:
+                BrandAsset.objects.update_or_create(kind=kind, defaults={
+                    "content_type": content_type, "data": data, "size": len(data),
+                    "filename": upload.name[:150], "updated_by": request.user,
+                })
+                log_action(request.user, "branding.upload", None, f"Uploaded {label.lower()} ({upload.name})")
+                messages.success(request, f"{label} updated. It now shows across the website, staff area and printouts.")
+                return redirect("core:branding")
+        else:
+            errors[kind] = "Choose an image file to upload."
+    slots = [
+        {"kind": BrandAsset.Kind.LOGO, "asset": assets.get("logo"), "error": errors.get("logo"),
+         "help": "Used on the website header, invoices, receipts and bills. A wide PNG or SVG with a transparent "
+                 "background works best (around 400 × 120 px)."},
+        {"kind": BrandAsset.Kind.LOGO_LIGHT, "asset": assets.get("logo-light"), "error": errors.get("logo-light"),
+         "help": "A white or light version for dark backgrounds: website footer, staff sidebar and login screen. "
+                 "If you skip it, the main logo is shown on a white badge."},
+        {"kind": BrandAsset.Kind.FAVICON, "asset": assets.get("favicon"), "error": errors.get("favicon"),
+         "help": "The small square icon in browser tabs and bookmarks. Square PNG (at least 64 × 64 px), ICO or SVG. "
+                 "Falls back to the main logo."},
+    ]
+    return render(request, "core/branding.html", {"slots": slots, "hotel_obj": hotel})
+
+
+def brand_asset(request, kind):
+    """Serve an uploaded logo. Public, cache-friendly, and SVGs are sandboxed so they can't run scripts."""
+    asset = get_object_or_404(BrandAsset, kind=kind)
+    response = HttpResponse(bytes(asset.data), content_type=asset.content_type)
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox"
+    if request.GET.get("v"):
+        response["Cache-Control"] = "public, max-age=31536000, immutable"
+    else:
+        response["Cache-Control"] = "public, max-age=300"
+    return response
 
 
 def permission_denied(request, exception=None):

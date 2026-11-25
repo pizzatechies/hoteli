@@ -236,6 +236,9 @@ LOGGING = {
 import sys  # noqa: E402
 
 if len(sys.argv) > 1 and sys.argv[1] == "test":
+    import warnings
+
+    warnings.filterwarnings("ignore", message="No directory at", module="django.core.handlers.base")
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
     LOGGING["root"]["level"] = "CRITICAL"
     LOGGING["loggers"]["mpesa"]["level"] = "CRITICAL"

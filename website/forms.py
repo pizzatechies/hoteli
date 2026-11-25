@@ -83,7 +83,7 @@ class ContactForm(BootstrapMixin, forms.ModelForm):
         return data
 
 
-THEME_FIELDS = ["primary_color", "accent_color", "dark_color", "heading_font", "logo_url", "footer_text"]
+THEME_FIELDS = ["primary_color", "accent_color", "dark_color", "heading_font", "footer_text"]
 
 
 class WebsiteContentForm(BootstrapMixin, forms.ModelForm):
@@ -101,8 +101,7 @@ class ThemeForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = WebsiteContent
         fields = THEME_FIELDS
-        labels = {"primary_color": "Primary", "accent_color": "Accent", "dark_color": "Dark",
-                  "logo_url": "Logo URL"}
+        labels = {"primary_color": "Primary", "accent_color": "Accent", "dark_color": "Dark"}
         widgets = {"primary_color": ColorInput(attrs={"class": "form-control-color"}),
                    "accent_color": ColorInput(attrs={"class": "form-control-color"}),
                    "dark_color": ColorInput(attrs={"class": "form-control-color"})}

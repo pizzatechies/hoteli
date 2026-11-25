@@ -47,13 +47,20 @@ A complete hotel management system for Kenyan hotels, built with Django. It cove
 - "Manage my booking" look-up (reference plus phone or email), where guests can view the booking and pay the balance
 - WhatsApp button, mobile friendly
 
+**Logos & branding** (Staff → Logos & branding, for managers)
+- Upload a main logo, a light logo for dark backgrounds, and a favicon (PNG, JPG, WebP, GIF, SVG or ICO)
+- The logos appear in the website header and footer, the staff sidebar, the login screen, invoices, receipts and POS bills
+- Option to hide the hotel name next to the logo when the logo already includes it
+- Files are stored in the database, so they survive redeploys on hosts without persistent disks (Render, Railway, Heroku)
+- Files are checked by content, not by name. SVGs are served in a sandbox so they can't run scripts.
+
 **Website builder** (Staff → Website builder, for managers)
 - Build pages from ready-made sections: hero banner with booking search, text, image and text, rooms and rates, facilities, menu highlights, photo gallery, icon features, guest reviews, FAQ, call to action, map and contact form
 - Start a page from a template (Homepage, About us, Events & conferences, Contact & location) or from a blank page
 - Add, edit, reorder, duplicate, hide and delete sections, with a live preview next to the editor
 - Draft and publish, preview drafts privately, and choose which pages appear in the menu and in what order
 - Use any builder page as the **homepage**. If none is set, the built-in homepage is used.
-- Theme: primary, accent and dark colours, heading font, logo and footer text, applied across the whole website
+- Theme: primary, accent and dark colours, heading font and footer text, applied across the whole website
 - Safe by design: text is escaped, links are restricted to http(s), relative, mailto and tel, colours are validated, and map embeds must come from Google Maps
 
 ## Quick start

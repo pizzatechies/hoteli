@@ -59,7 +59,6 @@ class WebsiteContent(models.Model):
     dark_color = models.CharField(max_length=7, default="#0f172a", validators=[HEX_COLOR],
                                   help_text="Footer and dark sections.")
     heading_font = models.CharField(max_length=40, choices=HEADING_FONTS, default="Playfair Display")
-    logo_url = models.URLField(blank=True, help_text="Optional logo image (replaces the icon next to the name).")
     footer_text = models.CharField(max_length=255, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 

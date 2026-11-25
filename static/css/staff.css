@@ -93,3 +93,9 @@ pre.payload { background: #0f172a; color: #e2e8f0; padding: .8rem; border-radius
 @media (min-width: 992px) {
   .staff-shell { background: linear-gradient(to right, var(--sidebar-bg) 250px, transparent 250px); }
 }
+.sidebar-logo { height: 40px; width: auto; max-width: 190px; object-fit: contain; }
+.logo-badge { background: #fff; border-radius: 8px; padding: 3px 6px; display: inline-flex; }
+.logo-preview { height: 120px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.logo-preview img { max-height: 96px; max-width: 100%; object-fit: contain; }
+.logo-preview.checker { background: repeating-conic-gradient(#f1f5f9 0% 25%, #fff 0% 50%) 50% / 16px 16px; border: 1px solid #e5e7eb; }
+.logo-preview.dark { background: var(--sidebar-bg); }
