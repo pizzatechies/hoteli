@@ -25,6 +25,7 @@ class WebsiteBookingTests(HotelTestCase):
         for name in ["home", "rooms", "dining", "facilities", "contact", "search", "lookup"]:
             self.assertEqual(self.client.get(reverse(f"website:{name}")).status_code, 200, name)
         self.assertContains(self.client.get(reverse("website:room_detail", args=[self.std.pk])), "Standard")
+        self.assertContains(self.client.get(reverse("website:home")), "Crafted by <strong class=\"text-white\">Pizza Technologies</strong>", html=False)
 
     def test_search_lists_available_types_with_quote(self):
         resp = self.client.get(reverse("website:search"), self.search_params())

@@ -93,7 +93,10 @@
     </div>
     <div class="d-flex flex-wrap justify-content-between border-top border-secondary-subtle pt-3 mt-4 small text-white-50">
       <span>&copy; {% now "Y" %} {{ hotel.name }}. All rights reserved.</span>
-      <a href="{% url 'accounts:login' %}" class="text-white-50">Staff login</a>
+      <span class="d-flex flex-wrap gap-3">
+        <span>Crafted by <strong class="text-white">Pizza Technologies</strong></span>
+        <a href="{% url 'accounts:login' %}" class="text-white-50">Staff login</a>
+      </span>
     </div>
   </div>
 </footer>
