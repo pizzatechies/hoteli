@@ -174,8 +174,14 @@ class Command(BaseCommand):
             create_page(title="About us", template="about", slug="about", is_published=False, nav_order=30)
             self.stdout.write(self.style.SUCCESS("Created website builder pages (Home, Events, About draft)."))
 
+        needed = {"101", "102", "104", "105", "106", "108", "201", "202", "203", "301", "303"}
         if not opts["no_bookings"] and not Booking.objects.exists():
-            self._bookings()
+            if needed <= set(Room.objects.values_list("number", flat=True)):
+                self._bookings()
+            else:
+                self.stdout.write(self.style.WARNING(
+                    "Skipped demo bookings: this database already has its own rooms."
+                ))
 
     def _bookings(self):
         today = timezone.localdate()
@@ -243,4 +249,62 @@ class Command(BaseCommand):
                                                priority=MaintenanceRequest.Priority.HIGH,
                                                puts_room_out_of_order=True, reported_by=reception)
         Room.objects.filter(pk=mr.room_id).update(is_out_of_order=True, out_of_order_reason=mr.title)
+        self._payments_and_orders(reception, guests, inhouse1, inhouse2)
         self.stdout.write(self.style.SUCCESS(f"Created {Booking.objects.count()} demo bookings."))
+
+    def _payments_and_orders(self, reception, guests, inhouse1, inhouse2):
+        """Sample M-Pesa activity, restaurant orders and an inbox message (always simulated)."""
+        from django.test.utils import override_settings
+
+        from mpesa import services as mpesa
+        from pos import services as pos
+        from pos.models import Order
+        from website.models import ContactMessage
+
+        arrival = Booking.objects.filter(guest=guests[1]).first()
+        with override_settings(MPESA_SIMULATE=True):
+            paid = mpesa.initiate_stk_push(phone=guests[0].phone, amount=Decimal("10000"), booking=inhouse1, user=reception)
+            mpesa.simulate_result(paid, "success")
+            if arrival:
+                cancelled = mpesa.initiate_stk_push(phone=guests[1].phone, amount=Decimal("7500"), booking=arrival,
+                                                    user=reception)
+                mpesa.simulate_result(cancelled, "cancel")
+                deposit = mpesa.initiate_stk_push(phone=guests[1].phone, amount=Decimal("7500"), booking=arrival,
+                                                  user=reception)
+                mpesa.simulate_result(deposit, "success")
+        now = timezone.localtime()
+        for trans_id, ref, amount, name in [("SKF3L8QZ2D", inhouse2.reference, "5000.00", "SARAH"),
+                                            ("SKF4N1WX7R", "ROOM 203", "2500.00", "AISHA")]:
+            mpesa.process_c2b_confirmation({
+                "TransactionType": "Pay Bill", "TransID": trans_id, "TransTime": now.strftime("%Y%m%d%H%M%S"),
+                "TransAmount": amount, "BusinessShortCode": "174379", "BillRefNumber": ref,
+                "MSISDN": "2547 ***** 123", "FirstName": name,
+            })
+
+        items = {i.name: i for i in MenuItem.objects.all()}
+        room_service = Order.objects.create(outlet=Order.Outlet.ROOM_SERVICE, booking=inhouse2,
+                                            customer_name=inhouse2.guest.full_name, created_by=reception)
+        for name, qty in [("Tilapia fry with ugali", 1), ("Fresh passion juice", 2)]:
+            if name in items:
+                pos.add_item(room_service, items[name], qty)
+        if room_service.items.exists():
+            pos.charge_to_room(room_service, reception)
+        waiter = User.objects.filter(username="restaurant").first() or reception
+        walk_in = Order.objects.create(outlet=Order.Outlet.BAR, table_number="4", customer_name="Walk-in", created_by=waiter)
+        for name, qty in [("Tusker lager", 3), ("Chips masala", 1)]:
+            if name in items:
+                pos.add_item(walk_in, items[name], qty)
+        if walk_in.items.exists():
+            record_payment(order=walk_in, amount=walk_in.total, method=Payment.Method.CASH, user=waiter)
+        lunch = Order.objects.create(outlet=Order.Outlet.RESTAURANT, table_number="7", customer_name="Table 7",
+                                     created_by=waiter)
+        for name, qty in [("Nyama choma (½ kg)", 2), ("Soda 500ml", 2)]:
+            if name in items:
+                pos.add_item(lunch, items[name], qty)
+
+        ContactMessage.objects.create(
+            name="Event planner (demo)", email="events@example.com", phone="0711000222",
+            subject="Conference for 40 people",
+            message="Hello, we would like a quote for a one-day conference for 40 people next month, "
+                    "including tea breaks and lunch. Do you have a projector?",
+        )

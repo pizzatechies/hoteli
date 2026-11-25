@@ -50,8 +50,16 @@ for _host_var in ("RENDER_EXTERNAL_HOSTNAME", "RAILWAY_PUBLIC_DOMAIN"):
         ALLOWED_HOSTS.append(_host)
         CSRF_TRUSTED_ORIGINS.append(f"https://{_host}")
 
+# GitHub Codespaces (live demo): trust the forwarded *.app.github.dev address.
+_codespace, _codespace_domain = env("CODESPACE_NAME"), env("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")
+_codespace_url = ""
+if _codespace and _codespace_domain:
+    ALLOWED_HOSTS.append(f".{_codespace_domain}")
+    CSRF_TRUSTED_ORIGINS.append(f"https://*.{_codespace_domain}")
+    _codespace_url = f"https://{_codespace}-8000.{_codespace_domain}"
+
 # Public base URL of this site, used for M-Pesa callbacks and links in emails.
-SITE_URL = (env("SITE_URL") or "http://localhost:8000").rstrip("/")
+SITE_URL = (env("SITE_URL") or _codespace_url or "http://localhost:8000").rstrip("/")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

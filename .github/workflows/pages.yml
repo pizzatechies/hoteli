@@ -1,0 +1,58 @@
+name: Deploy demo to GitHub Pages
+
+# Builds a static, read-only demo (hotel website + staff screens with demo data)
+# and publishes it to GitHub Pages. Rebuilt on every push to the default branch
+# and weekly, so the demo dates stay current.
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name != 'push' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    env:
+      DEBUG: "True"
+      MPESA_SIMULATE: "True"
+      DATABASE_URL: sqlite:////tmp/hoteli-demo.sqlite3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Create demo database
+        run: |
+          python manage.py migrate --no-input
+          python manage.py seed_demo
+      - name: Export static demo
+        run: >
+          python manage.py export_static_demo --out _site
+          --base "${{ vars.PAGES_BASE_PATH || format('/{0}/', github.event.repository.name) }}"
+          --repo "${{ github.repository }}"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}demo/
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

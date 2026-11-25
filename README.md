@@ -4,6 +4,19 @@ A complete hotel management system for Kenyan hotels, built with Django. It cove
 
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue) ![Django](https://img.shields.io/badge/django-5.2%20LTS-green)
 
+## Live demo
+
+| | |
+| --- | --- |
+| 🌐 **Hotel website (static preview)** | https://pizzatechies.github.io/hoteli/ |
+| 🧭 **Demo guide, every screen** | https://pizzatechies.github.io/hoteli/demo/ |
+| ▶️ **Full working demo** | [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/pizzatechies/hoteli?quickstart=1) |
+
+- **GitHub Pages preview:** the real app rendered with demo data. You can browse the website and every staff screen. Saving, booking and paying are switched off, because Pages can't run a server; those buttons explain this instead. It is rebuilt automatically on every push and once a week.
+- **Codespaces live demo:** starts the complete system on GitHub in about two minutes. Bookings, check-in and check-out, the POS and M-Pesa all work, with M-Pesa in simulation mode. Log in with `admin`, `manager`, `reception`, `accounts`, `housekeeping` or `restaurant`; the password is `demo12345`. You need a free GitHub account, and usage counts against that account's free Codespaces hours.
+
+> **One-time setup for the Pages site:** in the repository, open **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**. Then re-run the *Deploy demo to GitHub Pages* workflow from the **Actions** tab. To serve the demo from a custom domain, set the repository variable `PAGES_BASE_PATH` to `/`.
+
 ## Features
 
 **Front office**
@@ -214,6 +227,12 @@ In production, always set `DEBUG=False`, a long `SECRET_KEY`, `ALLOWED_HOSTS` an
 
 ```bash
 python manage.py test
+```
+
+Build the static demo locally. This refuses to run unless the database is a demo database, so real guest data is never published.
+
+```bash
+python manage.py export_static_demo --out _site --base /hoteli/ --repo pizzatechies/hoteli
 ```
 
 Project layout:

@@ -10,3 +10,4 @@ media/
 htmlcov/
 *.log
 .DS_Store
+_site/

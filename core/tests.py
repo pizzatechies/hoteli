@@ -1,6 +1,7 @@
 import base64
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
 from django.urls import reverse
 
 from decimal import Decimal
@@ -172,3 +173,44 @@ class HotelNameTests(HotelTestCase):
         self.login(self.reception)
         self.assertEqual(self.rename(name="Hacked Hotel").status_code, 403)
         self.assertEqual(HotelSettings.load().name, "Hoteli Grand")
+
+
+class StaticDemoExportTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+
+    def test_refuses_to_publish_a_real_database(self):
+        from django.core.management import CommandError, call_command
+
+        with self.assertRaisesMessage(CommandError, "Refusing to export"):
+            call_command("export_static_demo", out="/tmp/never-written", stdout=__import__("io").StringIO())
+
+    def test_exports_site_with_base_path(self):
+        import io
+        import json
+        import tempfile
+        from pathlib import Path
+
+        from django.core.management import call_command
+        from django.test import override_settings
+
+        call_command("seed_demo", stdout=io.StringIO())
+        with tempfile.TemporaryDirectory() as tmp, override_settings(DEBUG=True, MPESA_SIMULATE=True):
+            call_command("export_static_demo", out=tmp, base="/hoteli/", repo="pizzatechies/hoteli",
+                         stdout=io.StringIO())
+            out = Path(tmp)
+            home = (out / "index.html").read_text()
+            self.assertIn('href="/hoteli/static/css/site.css"', home)
+            self.assertIn("hoteli-demo-bar", home)
+            self.assertIn("https://codespaces.new/pizzatechies/hoteli", home)
+            self.assertNotIn('href="/staff/', home)
+            self.assertTrue((out / "staff" / "index.html").exists())
+            self.assertTrue((out / "demo" / "index.html").exists())
+            self.assertTrue((out / "404.html").exists())
+            self.assertTrue((out / ".nojekyll").exists())
+            manifest = (out / "static" / "js" / "demo-manifest.js").read_text()
+            data = json.loads(manifest.split("=", 1)[1].strip().rstrip(";"))
+            self.assertIn("/staff/bookings/", data["pages"])
+            self.assertEqual(data["base"], "/hoteli/")

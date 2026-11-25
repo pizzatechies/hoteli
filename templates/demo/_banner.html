@@ -1,0 +1,7 @@
+<div id="hoteli-demo-bar" style="background:#111827;color:#e5e7eb;font:500 13px/1.4 Inter,system-ui,sans-serif;padding:7px 14px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:center;position:relative;z-index:2000">
+  <span>🏨 <strong style="color:#fff">Hoteli demo</strong> – a read-only preview hosted on GitHub Pages.</span>
+  <a href="{{ base }}demo/" style="color:#5eead4;text-decoration:underline">Demo guide &amp; all screens</a>
+  <a href="{{ base }}staff/" style="color:#5eead4;text-decoration:underline">Staff system</a>
+  {% if live_url %}<a href="{{ live_url }}" target="_blank" rel="noopener" style="background:#0f766e;color:#fff;padding:3px 10px;border-radius:999px;text-decoration:none">▶ Try the live demo</a>{% endif %}
+</div>
+<style>@media print { #hoteli-demo-bar { display: none !important; } }</style>

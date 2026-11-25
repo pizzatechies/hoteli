@@ -1,0 +1,19 @@
+{
+  "name": "Hoteli live demo",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "containerEnv": {
+    "DEBUG": "True",
+    "MPESA_SIMULATE": "True"
+  },
+  "postCreateCommand": "pip install --user -r requirements.txt && python manage.py migrate --no-input && python manage.py seed_demo",
+  "postAttachCommand": "python manage.py runserver 0.0.0.0:8000",
+  "waitFor": "postCreateCommand",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": { "label": "Hoteli", "onAutoForward": "openBrowser" }
+  },
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] },
+    "vscode": { "extensions": ["ms-python.python"] }
+  }
+}
