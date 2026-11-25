@@ -1,0 +1,11 @@
+{% extends "base_site.html" %}
+{% block title %}Page not found{% endblock %}
+{% block content %}
+<div class="container text-center py-5 my-5">
+  <div class="display-1 text-body-tertiary">404</div>
+  <h1 class="h3">We couldn't find that page</h1>
+  <p class="text-body-secondary">It may have moved. Try the home page or check your booking.</p>
+  <a href="/" class="btn btn-brand">Go home</a>
+  <a href="{% url 'website:lookup' %}" class="btn btn-outline-secondary">Find my booking</a>
+</div>
+{% endblock %}

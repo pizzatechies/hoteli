@@ -1,0 +1,15 @@
+{% extends "base_staff.html" %}
+{% block title %}Website content{% endblock %}
+{% block page_title %}Website content{% endblock %}
+{% block content %}
+<div class="page-actions"><h1>Public website</h1><div class="d-flex gap-2"><a href="/" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up-right"></i> View site</a><a href="{% url 'website:inbox' %}" class="btn btn-outline-primary">Inbox{% if unread %} <span class="badge text-bg-danger">{{ unread }}</span>{% endif %}</a></div></div>
+<div class="row g-3">
+  <div class="col-xl-7"><div class="card"><div class="card-header">Homepage &amp; contact content</div><div class="card-body">
+    <form method="post">{% csrf_token %}{% include "partials/form.html" %}<button class="btn btn-primary mt-3">Save content</button></form>
+    <p class="small text-body-secondary mt-3 mb-0">Hotel name, tagline, address, phone, check-in times and online-booking rules (deposit %, hold time) are under <a href="{% url 'core:settings' %}">Settings</a>. Room photos and descriptions are under <a href="{% url 'rooms:types' %}">Room types</a>. The dining page shows your POS <a href="{% url 'pos:menu' %}">menu</a>.</p>
+  </div></div></div>
+  <div class="col-xl-5"><div class="card"><div class="card-header d-flex justify-content-between"><span>Facilities</span><a href="{% url 'website:facility_create' %}" class="small">+ Add</a></div>
+    <ul class="list-group list-group-flush">{% for f in facilities %}<li class="list-group-item d-flex justify-content-between align-items-center"><span><i class="bi bi-{{ f.icon }} text-primary"></i> {{ f.name }}{% if not f.is_active %} <span class="badge text-bg-secondary">Hidden</span>{% endif %}</span><a href="{% url 'website:facility_edit' f.pk %}" class="small">Edit</a></li>
+    {% empty %}<li class="list-group-item text-body-secondary small">No facilities listed.</li>{% endfor %}</ul></div></div>
+</div>
+{% endblock %}

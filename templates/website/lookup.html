@@ -1,0 +1,18 @@
+{% extends "base_site.html" %}
+{% block title %}Find my booking{% endblock %}
+{% block content %}
+<section class="section"><div class="container" style="max-width:560px">
+  <h1 class="h3 mb-2">Find my booking</h1>
+  <p class="text-body-secondary">View your booking, check your balance and pay with M-Pesa.</p>
+  <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-4">
+    <form method="post" novalidate>{% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+      <div class="row g-3">
+        {% include "partials/field.html" with field=form.reference col="col-12" %}
+        {% include "partials/field.html" with field=form.contact col="col-12" %}
+      </div>
+      <button class="btn btn-brand w-100 mt-3">Find booking</button>
+    </form>
+  </div></div>
+</div></section>
+{% endblock %}

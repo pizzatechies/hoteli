@@ -1,0 +1,26 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Payments{% endblock %}
+{% block page_title %}Payments{% endblock %}
+{% block content %}
+<form class="card card-body mb-3" method="get"><div class="row g-2 align-items-end">
+  <div class="col-md-4"><label class="form-label small">Search</label><input name="q" value="{{ q }}" class="form-control" placeholder="Receipt, M-Pesa code, booking, surname"></div>
+  <div class="col-6 col-md-2"><label class="form-label small">Method</label><select name="method" class="form-select"><option value="">All</option>{% for v, l in methods %}<option value="{{ v }}" {% if method == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+  <div class="col-6 col-md-2"><label class="form-label small">From</label><input type="date" name="from" value="{{ date_from }}" class="form-control"></div>
+  <div class="col-6 col-md-2"><label class="form-label small">To</label><input type="date" name="to" value="{{ date_to }}" class="form-control"></div>
+  <div class="col-6 col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+</div></form>
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>Receipt</th><th>Date</th><th>For</th><th>Method</th><th>Reference</th><th>By</th><th class="text-end">Amount</th></tr></thead>
+  <tbody>{% for p in page %}
+  <tr class="{% if p.is_void %}void-row{% endif %}">
+    <td><a href="{% url 'bookings:receipt' p.pk %}" target="_blank">{{ p.receipt_number }}</a> {% if p.kind == "REFUND" %}<span class="badge text-bg-danger">Refund</span>{% endif %}{% if p.is_void %}<span class="badge text-bg-secondary">Void</span>{% endif %}</td>
+    <td class="small">{{ p.created_at|date:"d M Y H:i" }}</td>
+    <td>{% if p.booking %}<a href="{% url 'bookings:detail' p.booking_id %}">{{ p.booking.reference }}</a> <span class="small text-body-secondary">{{ p.booking.guest }}</span>{% elif p.order %}<a href="{% url 'pos:order' p.order_id %}">{{ p.order.number }}</a>{% endif %}</td>
+    <td>{{ p.get_method_display }}</td><td class="small">{{ p.reference|default:"—" }}</td><td class="small">{{ p.received_by|default:"Online" }}</td>
+    <td class="text-end money">{% if p.kind == "REFUND" %}-{% endif %}{{ p.amount|money }}</td>
+  </tr>
+  {% empty %}<tr><td colspan="7" class="text-body-secondary">No payments found.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

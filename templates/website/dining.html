@@ -1,0 +1,25 @@
+{% extends "base_site.html" %}
+{% load hotel %}
+{% block title %}Dining{% endblock %}
+{% block content %}
+<section class="page-header"><div class="container"><div class="eyebrow">Restaurant &amp; bar</div><h1>Dining</h1>
+  <p class="text-body-secondary mb-0">Freshly prepared local and international dishes, served all day. In-house guests can charge meals to their room.</p></div></section>
+<section class="section pt-5"><div class="container">
+  {% if categories %}
+  <div class="row g-4">
+    {% for entry in categories %}
+    <div class="col-lg-6"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body p-4">
+      <h2 class="h4 mb-3">{{ entry.category.name }}</h2>
+      {% for item in entry.items %}
+      <div class="menu-item"><div><div class="fw-semibold">{{ item.name }}</div>{% if item.description %}<div class="small text-body-secondary">{{ item.description }}</div>{% endif %}</div>
+        <div class="fw-semibold text-nowrap">KES {{ item.price|money:0 }}</div></div>
+      {% endfor %}
+    </div></div></div>
+    {% endfor %}
+  </div>
+  <p class="small text-body-secondary mt-4">Prices include VAT and catering levy. Menu items and prices may change.</p>
+  {% else %}
+  <div class="text-center text-body-secondary py-5">Our menu will be published here soon. Ask the front desk for today's specials.</div>
+  {% endif %}
+</div></section>
+{% endblock %}

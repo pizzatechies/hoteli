@@ -1,0 +1,108 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard · {{ today|date:"l, j F Y" }}{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <h1>Good {% now "H" as hour %}{% if hour < "12" %}morning{% elif hour < "17" %}afternoon{% else %}evening{% endif %}, {{ request.user.first_name|default:request.user.username }}</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if nav.front_desk %}
+    <a href="{% url 'bookings:create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New booking</a>
+    <form method="post" action="{% url 'core:night_audit' %}" onsubmit="return confirm('Run night audit now? This posts tonight\'s room charges and marks no-shows.');">{% csrf_token %}
+      <button class="btn btn-outline-secondary" title="{% if last_audit %}Last run {{ last_audit.business_date|date:'d M' }}{% endif %}"><i class="bi bi-moon-stars"></i> Night audit</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body d-flex justify-content-between">
+    <div><div class="stat-label">Occupancy</div><div class="stat-value">{{ occupancy_pct }}%</div><div class="small text-body-secondary">{{ occupied }} of {{ rooms_total }} rooms</div></div>
+    <span class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-door-closed"></i></span></div></div></div>
+  <div class="col-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body d-flex justify-content-between">
+    <div><div class="stat-label">Arrivals / departures</div><div class="stat-value">{{ arrivals|length }} / {{ departures|length }}</div><div class="small text-body-secondary">due today</div></div>
+    <span class="stat-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-arrow-left-right"></i></span></div></div></div>
+  <div class="col-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body d-flex justify-content-between">
+    <div><div class="stat-label">Collected today</div><div class="stat-value money">{{ collected_today|money:0 }}</div><div class="small text-body-secondary">{{ hotel.currency }}</div></div>
+    <span class="stat-icon bg-success-subtle text-success"><i class="bi bi-cash-stack"></i></span></div></div></div>
+  <div class="col-6 col-xl-3"><div class="card stat-card h-100"><div class="card-body d-flex justify-content-between">
+    <div><div class="stat-label">Collected this month</div><div class="stat-value money">{{ collected_month|money:0 }}</div><div class="small text-body-secondary">{{ hotel.currency }}</div></div>
+    <span class="stat-icon bg-info-subtle text-info-emphasis"><i class="bi bi-graph-up-arrow"></i></span></div></div></div>
+</div>
+
+{% if pending_web or unmatched_c2b or open_maintenance %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  {% if pending_web %}<a href="{% url 'bookings:list' %}?status=PENDING&source=WEBSITE" class="alert alert-warning py-2 px-3 mb-0 text-decoration-none"><i class="bi bi-globe"></i> {{ pending_web }} online booking(s) awaiting deposit</a>{% endif %}
+  {% if unmatched_c2b %}<a href="{% url 'mpesa:c2b_list' %}?status=UNMATCHED" class="alert alert-danger py-2 px-3 mb-0 text-decoration-none"><i class="bi bi-exclamation-triangle"></i> {{ unmatched_c2b }} unmatched Paybill payment(s)</a>{% endif %}
+  {% if open_maintenance %}<a href="{% url 'housekeeping:maintenance' %}" class="alert alert-secondary py-2 px-3 mb-0 text-decoration-none"><i class="bi bi-tools"></i> {{ open_maintenance }} open maintenance issue(s)</a>{% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8"><div class="card h-100"><div class="card-header">Collections – last 14 days ({{ hotel.currency }})</div>
+    <div class="card-body"><canvas id="revenueChart" height="110"></canvas></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Room status</div><div class="card-body">
+    <div class="d-flex justify-content-between mb-2"><span><span class="legend-dot bg-success"></span>Clean / inspected</span><strong>{{ hk.clean }}</strong></div>
+    <div class="d-flex justify-content-between mb-2"><span><span class="legend-dot bg-danger"></span>Dirty</span><strong>{{ hk.dirty }}</strong></div>
+    <div class="d-flex justify-content-between mb-2"><span><span class="legend-dot bg-warning"></span>Being cleaned</span><strong>{{ hk.cleaning }}</strong></div>
+    <div class="d-flex justify-content-between mb-3"><span><span class="legend-dot bg-dark"></span>Out of order</span><strong>{{ hk.ooo }}</strong></div>
+    <div class="small text-body-secondary mb-2">{{ open_tasks }} open housekeeping task(s)</div>
+    <a href="{% url 'housekeeping:board' %}" class="btn btn-sm btn-outline-primary w-100">Housekeeping board</a>
+  </div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Arrivals today</span><a href="{% url 'bookings:front_desk' %}" class="small">Front desk</a></div>
+    <div class="list-group list-group-flush">
+    {% for b in arrivals %}
+      <a href="{% url 'bookings:detail' b.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <span><strong>{{ b.guest }}</strong> <span class="small text-body-secondary">· Room {{ b.room.number }} · {{ b.nights }} night{{ b.nights|pluralize }}</span></span>
+        {% status_badge b %}
+      </a>
+    {% empty %}<div class="list-group-item text-body-secondary small">No arrivals expected today.</div>{% endfor %}
+    </div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Departures due</div>
+    <div class="list-group list-group-flush">
+    {% for b in departures %}
+      <a href="{% url 'bookings:detail' b.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <span><strong>{{ b.guest }}</strong> <span class="small text-body-secondary">· Room {{ b.room.number }}</span></span>
+        {% if b.is_overdue_departure %}<span class="badge text-bg-danger">Overdue</span>{% else %}<span class="badge text-bg-warning">Today</span>{% endif %}
+      </a>
+    {% empty %}<div class="list-group-item text-body-secondary small">No departures due.</div>{% endfor %}
+    </div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card h-100"><div class="card-header">Occupancy forecast – next 14 days</div>
+    <div class="card-body"><canvas id="forecastChart" height="150"></canvas></div></div></div>
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Recent M-Pesa prompts</span><a href="{% url 'mpesa:list' %}" class="small">All</a></div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Time</th><th>For</th><th>Phone</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for tx in recent_mpesa %}
+        <tr><td class="small">{{ tx.created_at|date:"d M H:i" }}</td><td>{{ tx.target_label }}</td><td class="small">{{ tx.masked_phone }}</td>
+          <td class="text-end money">{{ tx.amount|money:0 }}</td><td>{% status_badge tx %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="text-body-secondary small">No M-Pesa transactions yet.</td></tr>{% endfor %}
+      </tbody></table></div></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ chart_labels|json_script:"chart-labels" }}{{ chart_values|json_script:"chart-values" }}
+{{ forecast_labels|json_script:"forecast-labels" }}{{ forecast_values|json_script:"forecast-values" }}
+<script>
+(function () {
+  const j = (id) => JSON.parse(document.getElementById(id).textContent);
+  new Chart(document.getElementById("revenueChart"), {
+    type: "bar",
+    data: { labels: j("chart-labels"), datasets: [{ label: "Collected", data: j("chart-values"), backgroundColor: "#0f766e", borderRadius: 4 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => v.toLocaleString() } }, x: { grid: { display: false } } } }
+  });
+  new Chart(document.getElementById("forecastChart"), {
+    type: "line",
+    data: { labels: j("forecast-labels"), datasets: [{ label: "Occupancy %", data: j("forecast-values"), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.1)", fill: true, tension: .3 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + "%" } }, x: { grid: { display: false } } } }
+  });
+})();
+</script>
+{% endblock %}

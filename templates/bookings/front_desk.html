@@ -1,0 +1,66 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Front desk{% endblock %}
+{% block page_title %}Front desk · {{ today|date:"D j M Y" }}{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <h1>Front desk</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'bookings:create' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Walk-in / new booking</a>
+    <a href="{% url 'bookings:guest_register' %}" class="btn btn-outline-secondary" target="_blank"><i class="bi bi-printer"></i> Guest register</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-xl-6"><div class="card h-100"><div class="card-header"><i class="bi bi-box-arrow-in-right text-success"></i> Arrivals ({{ arrivals|length }})</div>
+    <div class="table-responsive"><table class="table align-middle mb-0">
+      <thead><tr><th>Guest</th><th>Room</th><th>Nights</th><th class="text-end">Paid</th><th></th></tr></thead><tbody>
+      {% for b in arrivals %}
+      <tr>
+        <td><a href="{% url 'bookings:detail' b.pk %}" class="fw-semibold">{{ b.guest }}</a>{% if b.guest.is_vip %} <span class="badge text-bg-warning">VIP</span>{% endif %}
+          <div class="small text-body-secondary">{{ b.reference }} · {% status_badge b %}{% if b.check_in_date < today %} <span class="badge text-bg-danger">Late {{ b.check_in_date|date:"d M" }}</span>{% endif %}</div></td>
+        <td>{{ b.room.number }} <div class="small">{% status_badge b.room "hk_status" %}</div></td>
+        <td>{{ b.nights }}</td>
+        <td class="text-end money">{{ b.payments_total|money:0 }}</td>
+        <td class="text-end"><a href="{% url 'bookings:detail' b.pk %}" class="btn btn-sm btn-success">Check in</a></td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="text-body-secondary">No arrivals pending.</td></tr>{% endfor %}
+    </tbody></table></div></div></div>
+  <div class="col-xl-6"><div class="card h-100"><div class="card-header"><i class="bi bi-box-arrow-right text-danger"></i> Departures ({{ departures|length }})</div>
+    <div class="table-responsive"><table class="table align-middle mb-0">
+      <thead><tr><th>Guest</th><th>Room</th><th>Due</th><th class="text-end">Balance</th><th></th></tr></thead><tbody>
+      {% for b in departures %}
+      <tr>
+        <td><a href="{% url 'bookings:detail' b.pk %}" class="fw-semibold">{{ b.guest }}</a><div class="small text-body-secondary">{{ b.reference }}</div></td>
+        <td>{{ b.room.number }}</td>
+        <td>{% if b.is_overdue_departure %}<span class="badge text-bg-danger">Overdue {{ b.check_out_date|date:"d M" }}</span>{% else %}Today{% endif %}</td>
+        <td class="text-end money {% if b.balance > 0 %}text-danger{% endif %}">{{ b.balance|money }}</td>
+        <td class="text-end"><a href="{% url 'bookings:detail' b.pk %}" class="btn btn-sm btn-outline-danger">Check out</a></td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="text-body-secondary">No departures due.</td></tr>{% endfor %}
+    </tbody></table></div></div></div>
+  <div class="col-xl-8"><div class="card"><div class="card-header"><i class="bi bi-house-door text-primary"></i> In-house guests ({{ in_house|length }})</div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Room</th><th>Guest</th><th>Phone</th><th>Departure</th><th class="text-end">Posted</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead><tbody>
+      {% for b in in_house %}
+      <tr>
+        <td class="fw-semibold">{{ b.room.number }}</td>
+        <td><a href="{% url 'bookings:detail' b.pk %}">{{ b.guest }}</a></td>
+        <td class="small">{{ b.guest.phone }}</td>
+        <td>{{ b.check_out_date|date:"D d M" }}</td>
+        <td class="text-end money">{{ b.charges_total|money }}</td>
+        <td class="text-end money">{{ b.payments_total|money }}</td>
+        <td class="text-end money {% if b.balance > 0 %}text-danger{% else %}text-success{% endif %}">{{ b.balance|money }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="7" class="text-body-secondary">No guests in-house.</td></tr>{% endfor %}
+    </tbody></table></div></div></div>
+  <div class="col-xl-4"><div class="card"><div class="card-header">Next 7 days</div>
+    <div class="list-group list-group-flush">
+      {% for b in upcoming %}
+      <a href="{% url 'bookings:detail' b.pk %}" class="list-group-item list-group-item-action">
+        <div class="d-flex justify-content-between"><strong>{{ b.guest }}</strong><span class="small">{{ b.check_in_date|date:"D d M" }}</span></div>
+        <div class="small text-body-secondary">Room {{ b.room.number }} · {{ b.nights }} night{{ b.nights|pluralize }} · {{ b.get_status_display }}</div>
+      </a>
+      {% empty %}<div class="list-group-item small text-body-secondary">Nothing booked for the coming week.</div>{% endfor %}
+    </div></div></div>
+</div>
+{% endblock %}

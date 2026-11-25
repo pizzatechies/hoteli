@@ -1,0 +1,19 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Menu{% endblock %}
+{% block page_title %}Menu{% endblock %}
+{% block content %}
+<div class="page-actions"><h1>Menu</h1>{% if can_edit %}<div class="d-flex gap-2"><a href="{% url 'pos:category_create' %}" class="btn btn-outline-primary">Add category</a><a href="{% url 'pos:item_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add item</a></div>{% endif %}</div>
+<div class="row g-3">
+{% for cat in categories %}
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>{{ cat.name }}{% if not cat.is_active %} <span class="badge text-bg-secondary">Hidden</span>{% endif %}</span>
+    {% if can_edit %}<span class="small"><a href="{% url 'pos:item_create' %}?category={{ cat.pk }}">+ item</a> · <a href="{% url 'pos:category_edit' cat.pk %}">edit</a></span>{% endif %}</div>
+    <ul class="list-group list-group-flush">
+    {% for item in cat.items.all %}<li class="list-group-item d-flex justify-content-between align-items-center">
+      <span>{{ item.name }} <span class="badge text-bg-light">{{ item.get_kind_display }}</span>{% if not item.is_available %} <span class="badge text-bg-secondary">Unavailable</span>{% endif %}{% if item.description %}<div class="small text-body-secondary">{{ item.description }}</div>{% endif %}</span>
+      <span class="money">{{ item.price|money }} {% if can_edit %}<a href="{% url 'pos:item_edit' item.pk %}" class="ms-2 small">Edit</a>{% endif %}</span></li>
+    {% empty %}<li class="list-group-item text-body-secondary small">No items.</li>{% endfor %}
+    </ul></div></div>
+{% empty %}<div class="col-12 text-body-secondary">No menu categories yet.</div>{% endfor %}
+</div>
+{% endblock %}

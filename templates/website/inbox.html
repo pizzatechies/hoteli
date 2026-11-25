@@ -1,0 +1,18 @@
+{% extends "base_staff.html" %}
+{% block title %}Inbox{% endblock %}
+{% block page_title %}Website inbox{% endblock %}
+{% block content %}
+<div class="page-actions"><h1>Messages from the website</h1>
+  <a href="?{% if not unread_only %}unread=1{% endif %}" class="btn btn-sm btn-outline-secondary">{% if unread_only %}Show all{% else %}Unread only{% endif %}</a></div>
+{% for m in page %}
+<div class="card mb-2 {% if not m.is_read %}border-primary{% endif %}"><div class="card-body">
+  <div class="d-flex justify-content-between flex-wrap gap-2">
+    <div><strong>{{ m.subject }}</strong> {% if not m.is_read %}<span class="badge text-bg-primary">New</span>{% endif %}
+      <div class="small text-body-secondary">{{ m.name }}{% if m.email %} · <a href="mailto:{{ m.email }}?subject=Re: {{ m.subject|urlencode }}">{{ m.email }}</a>{% endif %}{% if m.phone %} · <a href="tel:{{ m.phone }}">{{ m.phone }}</a>{% endif %} · {{ m.created_at|date:"d M Y H:i" }}</div></div>
+    <form method="post" action="{% url 'website:inbox_toggle' m.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-light">Mark {% if m.is_read %}unread{% else %}read{% endif %}</button></form>
+  </div>
+  <p class="mb-0 mt-2">{{ m.message|linebreaksbr }}</p>
+</div></div>
+{% empty %}<div class="card card-body text-body-secondary">No messages.</div>{% endfor %}
+{% include "partials/pagination.html" %}
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Housekeeping{% endblock %}
+{% block page_title %}Housekeeping{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <div class="btn-group" role="group">
+    <a href="?" class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">All rooms</a>
+    <a href="?status=dirty" class="btn btn-sm {% if status_filter == 'dirty' %}btn-primary{% else %}btn-outline-primary{% endif %}">Needs cleaning</a>
+    <a href="?status=ready" class="btn btn-sm {% if status_filter == 'ready' %}btn-primary{% else %}btn-outline-primary{% endif %}">Ready</a>
+    <a href="?status=ooo" class="btn btn-sm {% if status_filter == 'ooo' %}btn-primary{% else %}btn-outline-primary{% endif %}">Out of order</a>
+  </div>
+  <div class="d-flex gap-2"><a href="{% url 'housekeeping:tasks' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-list-check"></i> Task list</a>
+    <a href="{% url 'housekeeping:task_create' %}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> New task</a>
+    <a href="{% url 'housekeeping:maintenance_create' %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-tools"></i> Report issue</a></div>
+</div>
+
+{% if my_tasks %}
+<div class="card mb-3 border-primary"><div class="card-header">My tasks</div><ul class="list-group list-group-flush">
+  {% for t in my_tasks %}<li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span><strong>Room {{ t.room.number }}</strong> · {{ t.get_task_type_display }} {% status_badge t "priority" %} {% status_badge t %}{% if t.notes %}<div class="small text-body-secondary">{{ t.notes }}</div>{% endif %}</span>
+    <span class="d-flex gap-1">
+      {% if t.status == "PENDING" %}<form method="post" action="{% url 'housekeeping:task_action' t.pk 'start' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-outline-primary">Start</button></form>{% endif %}
+      <form method="post" action="{% url 'housekeeping:task_action' t.pk 'done' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-success">Done</button></form>
+    </span></li>{% endfor %}
+</ul></div>
+{% endif %}
+
+<div class="row g-2">
+{% for room in rooms %}
+  <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
+    <div class="room-tile {% if room.is_out_of_order %}st-ooo{% elif room.hk_status == 'DIRTY' or room.hk_status == 'CLEANING' %}st-dirty{% elif room.occupied %}st-occupied{% else %}st-vacant{% endif %}">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><span class="room-number">{{ room.number }}</span> <span class="small text-body-secondary">{{ room.room_type }}</span></div>
+        {% status_badge room "hk_status" %}
+      </div>
+      <div class="small mb-2">
+        {% if room.occupied %}<span class="badge text-bg-primary">Occupied</span>{% else %}<span class="badge text-bg-light">Vacant</span>{% endif %}
+        {% if room.departing %}<span class="badge text-bg-warning">Departure</span>{% endif %}
+        {% if room.arriving %}<span class="badge text-bg-info">Arrival today</span>{% endif %}
+        {% if room.is_out_of_order %}<span class="badge text-bg-dark">OOO: {{ room.out_of_order_reason }}</span>{% endif %}
+      </div>
+      {% for t in room.tasks %}<div class="small border rounded px-2 py-1 mb-1 d-flex justify-content-between align-items-center"><span>{{ t.get_task_type_display }} {% if t.assigned_to %}· {{ t.assigned_to }}{% endif %}</span>
+        <form method="post" action="{% url 'housekeeping:task_action' t.pk 'done' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-link p-0">Done</button></form></div>{% endfor %}
+      <form method="post" action="{% url 'housekeeping:room_status' room.pk %}" class="d-flex gap-1 flex-wrap mt-2">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        {% for value, label in statuses %}{% if value != room.hk_status %}<button name="status" value="{{ value }}" class="btn btn-sm btn-outline-{{ value|badge }}">{{ label|cut:" in progress" }}</button>{% endif %}{% endfor %}
+      </form>
+    </div>
+  </div>
+{% empty %}<div class="col-12 text-body-secondary">No rooms match.</div>{% endfor %}
+</div>
+{% endblock %}

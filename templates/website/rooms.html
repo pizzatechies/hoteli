@@ -1,0 +1,12 @@
+{% extends "base_site.html" %}
+{% block title %}Rooms & rates{% endblock %}
+{% block content %}
+<section class="page-header"><div class="container">
+  <h1 class="mb-2">Rooms &amp; rates</h1><p class="text-body-secondary mb-4">All rates are per room per night in Kenya Shillings, inclusive of VAT and levies.</p>
+  {% if hotel.website_booking_enabled %}{% include "website/_search_form.html" %}{% endif %}
+</div></section>
+<section class="section pt-5"><div class="container"><div class="row g-4">
+  {% for rt in room_types %}<div class="col-md-6 col-lg-4">{% include "website/_room_card.html" %}</div>
+  {% empty %}<p class="text-body-secondary">No rooms listed yet.</p>{% endfor %}
+</div></div></section>
+{% endblock %}

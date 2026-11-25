@@ -1,0 +1,48 @@
+{% extends "base_site.html" %}
+{% load hotel %}
+{% block title %}Your details – {{ rt.name }}{% endblock %}
+{% block content %}
+<section class="section pt-4"><div class="container">
+  <div class="steps mb-4"><span class="step"><span class="num">1</span> Choose room</span><span class="step active"><span class="num">2</span> Your details</span><span class="step"><span class="num">3</span> Pay with M-Pesa</span></div>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <h1 class="h3 mb-3">Your details</h1>
+      <form method="post" novalidate data-once>{% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
+        <div class="row g-3">
+          {% include "partials/field.html" with field=form.first_name %}
+          {% include "partials/field.html" with field=form.last_name %}
+          {% include "partials/field.html" with field=form.phone %}
+          {% include "partials/field.html" with field=form.email %}
+          {% include "partials/field.html" with field=form.special_requests col="col-12" %}
+          {% include "partials/field.html" with field=form.accept_terms col="col-12" %}
+        </div>
+        <div style="position:absolute;left:-9999px" aria-hidden="true">{{ form.website }}</div>
+        <div class="alert alert-light border small mt-3">
+          {% if deposit %}
+          <strong>Deposit:</strong> to confirm, pay <strong>KES {{ deposit|money:0 }}</strong> ({{ hotel.deposit_percent }}%) via M-Pesa on the next step. We hold the room for {{ hotel.pending_hold_minutes }} minutes. The balance is payable on arrival.
+          {% else %}
+          <strong>No prepayment needed.</strong> You can pay online now with M-Pesa or on arrival.
+          {% endif %}
+          Free cancellation is subject to the hotel's policy – contact us to change or cancel.
+        </div>
+        <button class="btn btn-brand btn-lg mt-2" data-loading="Reserving your room…">{% if deposit %}Continue to payment{% else %}Confirm booking{% endif %} <i class="bi bi-arrow-right"></i></button>
+      </form>
+    </div>
+    <div class="col-lg-5">
+      <div class="card summary-card"><div class="card-body p-4">
+        <h2 class="h5">{{ rt.name }}</h2>
+        <ul class="list-unstyled small mb-3">
+          <li><i class="bi bi-calendar-event"></i> {{ check_in|date:"D j M Y" }} → {{ check_out|date:"D j M Y" }}</li>
+          <li><i class="bi bi-moon"></i> {{ nights }} night{{ nights|pluralize }}</li>
+          <li><i class="bi bi-people"></i> {{ adults }} adult{{ adults|pluralize }}{% if children %}, {{ children }} child{{ children|pluralize:"ren" }}{% endif %}</li>
+        </ul>
+        <div class="d-flex justify-content-between border-top pt-3"><span>Total stay</span><strong>KES {{ total|money:0 }}</strong></div>
+        {% if deposit %}<div class="d-flex justify-content-between text-success"><span>Due now (deposit)</span><strong>KES {{ deposit|money:0 }}</strong></div>{% endif %}
+        <div class="small text-body-secondary mt-2">Prices include VAT &amp; levies.</div>
+        <a href="{% url 'website:search' %}?{{ query }}" class="small d-inline-block mt-3">&larr; Change room or dates</a>
+      </div></div>
+    </div>
+  </div>
+</div></section>
+{% endblock %}

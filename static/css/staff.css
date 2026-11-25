@@ -1,0 +1,95 @@
+:root {
+  --brand: #0f766e;
+  --brand-dark: #115e59;
+  --sidebar-bg: #0f172a;
+  --sidebar-fg: #cbd5e1;
+  --bs-font-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bs-body-bg: #f4f6f9;
+}
+body.staff { background: #f4f6f9; font-size: .925rem; }
+.btn-primary { --bs-btn-bg: var(--brand); --bs-btn-border-color: var(--brand); --bs-btn-hover-bg: var(--brand-dark);
+  --bs-btn-hover-border-color: var(--brand-dark); --bs-btn-active-bg: var(--brand-dark); --bs-btn-disabled-bg: var(--brand); --bs-btn-disabled-border-color: var(--brand); }
+.btn-outline-primary { --bs-btn-color: var(--brand); --bs-btn-border-color: var(--brand); --bs-btn-hover-bg: var(--brand);
+  --bs-btn-hover-border-color: var(--brand); --bs-btn-active-bg: var(--brand-dark); }
+.text-bg-primary { background-color: var(--brand) !important; }
+a { color: var(--brand); }
+.staff-shell { display: flex; min-height: 100vh; }
+.sidebar { width: 250px; background: var(--sidebar-bg); color: var(--sidebar-fg); flex-shrink: 0; }
+@media (min-width: 992px) {
+  .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+}
+.sidebar.offcanvas-lg { background-color: var(--sidebar-bg) !important; color: var(--sidebar-fg); }
+.payment-tabs .nav-link { padding: .35rem .5rem; font-size: .82rem; }
+.sidebar-brand { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.1rem .9rem;
+  border-bottom: 1px solid rgba(255,255,255,.08); }
+.brand-mark { display: inline-flex; width: 32px; height: 32px; border-radius: 8px; align-items: center; justify-content: center;
+  background: var(--brand); color: #fff; }
+.sidebar-nav { padding: .5rem .6rem 2rem; display: flex; flex-direction: column; width: 100%; }
+.sidebar-nav a { display: flex; align-items: center; gap: .65rem; color: var(--sidebar-fg); text-decoration: none;
+  padding: .5rem .7rem; border-radius: 8px; margin-bottom: 2px; }
+.sidebar-nav a:hover { background: rgba(255,255,255,.06); color: #fff; }
+.sidebar-nav a.active { background: var(--brand); color: #fff; }
+.sidebar-nav .nav-section { text-transform: uppercase; font-size: .68rem; letter-spacing: .08em; color: #64748b;
+  padding: 1rem .7rem .35rem; }
+.staff-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; gap: .75rem; background: #fff; padding: .65rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 1020; }
+.topbar-title { font-weight: 600; font-size: 1.05rem; }
+.staff-content { padding: 1.25rem; }
+@media (max-width: 575.98px) { .staff-content { padding: 1rem; } .topbar { padding: .5rem 1rem; } }
+.card { border: 1px solid #e5e7eb; border-radius: 12px; }
+.card-header { background: #fff; border-bottom: 1px solid #eef0f3; font-weight: 600; border-radius: 12px 12px 0 0 !important; }
+.stat-card .stat-label { color: #64748b; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+.stat-card .stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+.stat-card .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 1.3rem; }
+.table > :not(caption) > * > * { padding: .55rem .65rem; }
+.table thead th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; font-weight: 600; background: #f8fafc; }
+.table-card { margin-bottom: 0; }
+.money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.page-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.page-actions h1 { font-size: 1.35rem; margin: 0; font-weight: 700; }
+.void-row { text-decoration: line-through; color: #94a3b8; }
+.room-tile { border-radius: 10px; padding: .7rem; border: 1px solid #e5e7eb; background: #fff; height: 100%; position: relative; }
+.room-tile .room-number { font-size: 1.25rem; font-weight: 700; }
+.room-tile.st-occupied { border-left: 5px solid #2563eb; }
+.room-tile.st-vacant { border-left: 5px solid #16a34a; }
+.room-tile.st-dirty { border-left: 5px solid #dc2626; }
+.room-tile.st-ooo { border-left: 5px solid #111827; background: #f3f4f6; }
+.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+/* tape chart */
+.tape { font-size: .8rem; }
+.tape th, .tape td { white-space: nowrap; border-color: #e5e7eb; }
+.tape .room-col { position: sticky; left: 0; background: #fff; z-index: 2; min-width: 110px; }
+.tape .day-col { min-width: 64px; text-align: center; }
+.tape .today { background: #ecfdf5 !important; }
+.tape .weekend { background: #f8fafc; }
+.tape td.free a { display: block; height: 100%; min-height: 30px; color: transparent; }
+.tape td.free:hover { background: #e0f2fe; }
+.tape td.free:hover a { color: #0369a1; }
+.tape td.past { background: #fafafa; }
+.tape .stay { padding: 2px !important; }
+.tape .stay a { display: block; border-radius: 6px; padding: 4px 6px; color: #fff; text-decoration: none; overflow: hidden; text-overflow: ellipsis; }
+.stay-PENDING a { background: #f59e0b; }
+.stay-CONFIRMED a { background: #2563eb; }
+.stay-CHECKED_IN a { background: #16a34a; }
+.stay-CHECKED_OUT a { background: #94a3b8; }
+.stay .cut-left { border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
+.stay .cut-right { border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; }
+/* pos */
+.menu-btn { text-align: left; height: 100%; }
+.menu-btn .price { font-weight: 600; }
+pre.payload { background: #0f172a; color: #e2e8f0; padding: .8rem; border-radius: 8px; font-size: .78rem; max-height: 360px; overflow: auto; }
+@media print {
+  .sidebar, .topbar, .no-print, .alert { display: none !important; }
+  .staff-content { padding: 0; }
+  body.staff { background: #fff; }
+  .card { border: none; }
+}
+.nav-pills { --bs-nav-pills-link-active-bg: var(--brand); }
+.nav-link { color: var(--brand); }
+.nav-link:hover, .nav-link:focus { color: var(--brand-dark); }
+.sidebar-nav a { color: var(--sidebar-fg); }
+@media (min-width: 992px) {
+  .staff-shell { background: linear-gradient(to right, var(--sidebar-bg) 250px, transparent 250px); }
+}

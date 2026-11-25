@@ -1,0 +1,276 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}{{ booking.reference }}{% endblock %}
+{% block page_title %}Booking {{ booking.reference }}{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <div>
+    <h1 class="d-flex align-items-center gap-2 flex-wrap">{{ booking.guest }} {% status_badge booking %}
+      {% if booking.guest.is_vip %}<span class="badge text-bg-warning">VIP</span>{% endif %}
+      {% if booking.guest.is_blacklisted %}<span class="badge text-bg-danger">Blacklisted</span>{% endif %}</h1>
+    <div class="text-body-secondary small">{{ booking.reference }} · Room {{ booking.room.number }} ({{ booking.room.room_type }}) · {{ booking.check_in_date|date:"D d M" }} → {{ booking.check_out_date|date:"D d M Y" }}</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if can_front_desk %}
+      {% if booking.status == "PENDING" %}
+      <form method="post" action="{% url 'bookings:confirm' booking.pk %}">{% csrf_token %}<button class="btn btn-outline-primary"><i class="bi bi-check2-circle"></i> Confirm</button></form>
+      {% endif %}
+      {% if booking.can_check_in %}<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#checkInModal"><i class="bi bi-box-arrow-in-right"></i> Check in</button>{% endif %}
+      {% if booking.can_check_out %}<button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#checkOutModal"><i class="bi bi-box-arrow-right"></i> Check out</button>{% endif %}
+      {% if booking.can_edit %}<a href="{% url 'bookings:edit' booking.pk %}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> {% if booking.status == "CHECKED_IN" %}Extend / move{% else %}Edit{% endif %}</a>{% endif %}
+    {% endif %}
+    <a href="{% url 'bookings:invoice' booking.pk %}" class="btn btn-outline-secondary" target="_blank"><i class="bi bi-receipt"></i> Invoice</a>
+    {% if can_front_desk %}
+    <div class="dropdown">
+      <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">More</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        {% if booking.can_cancel %}<li><button class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#cancelModal"><i class="bi bi-x-octagon"></i> Cancel booking</button></li>{% endif %}
+        {% if booking.can_cancel %}<li><form method="post" action="{% url 'bookings:no_show' booking.pk %}" onsubmit="return confirm('Mark as no-show?')">{% csrf_token %}<button class="dropdown-item"><i class="bi bi-person-x"></i> Mark no-show</button></form></li>{% endif %}
+        <li><form method="post" action="{% url 'bookings:resend_confirmation' booking.pk %}">{% csrf_token %}<button class="dropdown-item"><i class="bi bi-envelope"></i> Email confirmation</button></form></li>
+        <li><a class="dropdown-item" href="{% url 'website:booking' booking.public_token %}" target="_blank"><i class="bi bi-link-45deg"></i> Guest payment link</a></li>
+        <li><a class="dropdown-item" href="{% url 'bookings:guest_detail' booking.guest.pk %}"><i class="bi bi-person"></i> Guest profile</a></li>
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if booking.status == "PENDING" and booking.expires_at %}
+<div class="alert alert-warning"><i class="bi bi-hourglass-split"></i> Online booking awaiting deposit of <strong>KES {{ booking.deposit_outstanding|money }}</strong>. The room is held until {{ booking.expires_at|date:"d M H:i" }}.</div>
+{% endif %}
+{% if booking.is_overdue_departure %}
+<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Departure was due {{ booking.check_out_date|date:"d M" }}. Check the guest out or extend the stay.</div>
+{% endif %}
+
+{% if active_tx %}{% include "partials/mpesa_status.html" with tx_id=active_tx %}{% endif %}
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><div class="card h-100"><div class="card-header">Stay</div><div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5">Room</dt><dd class="col-7">{{ booking.room.number }} · {{ booking.room.room_type }} {% status_badge booking.room "hk_status" %}</dd>
+          <dt class="col-5">Dates</dt><dd class="col-7">{{ booking.check_in_date|date:"d M Y" }} → {{ booking.check_out_date|date:"d M Y" }} ({{ booking.nights }} night{{ booking.nights|pluralize }})</dd>
+          <dt class="col-5">Guests</dt><dd class="col-7">{{ booking.adults }} adult{{ booking.adults|pluralize }}{% if booking.children %}, {{ booking.children }} child{{ booking.children|pluralize:"ren" }}{% endif %}</dd>
+          <dt class="col-5">Rate</dt><dd class="col-7">KES {{ booking.rate|money }} / night</dd>
+          <dt class="col-5">Source</dt><dd class="col-7">{{ booking.get_source_display }}</dd>
+          {% if booking.actual_check_in %}<dt class="col-5">Checked in</dt><dd class="col-7">{{ booking.actual_check_in|date:"d M Y H:i" }}</dd>{% endif %}
+          {% if booking.actual_check_out %}<dt class="col-5">Checked out</dt><dd class="col-7">{{ booking.actual_check_out|date:"d M Y H:i" }}</dd>{% endif %}
+          {% if booking.cancelled_at %}<dt class="col-5">Cancelled</dt><dd class="col-7">{{ booking.cancelled_at|date:"d M Y H:i" }} – {{ booking.cancellation_reason }}</dd>{% endif %}
+          <dt class="col-5">Created</dt><dd class="col-7">{{ booking.created_at|date:"d M Y H:i" }}{% if booking.created_by %} by {{ booking.created_by }}{% endif %}</dd>
+        </dl>
+        {% if booking.special_requests %}<div class="mt-2 small"><strong>Requests:</strong> {{ booking.special_requests|linebreaksbr }}</div>{% endif %}
+        {% if booking.internal_notes %}<div class="mt-2 small bg-body-tertiary p-2 rounded"><strong>Internal notes:</strong><br>{{ booking.internal_notes|linebreaksbr }}</div>{% endif %}
+      </div></div></div>
+      <div class="col-md-6"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Guest</span>{% if can_front_desk %}<a href="{% url 'bookings:guest_edit' booking.guest.pk %}?next={{ request.path }}" class="small">Edit</a>{% endif %}</div><div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5">Name</dt><dd class="col-7"><a href="{% url 'bookings:guest_detail' booking.guest.pk %}">{{ booking.guest }}</a></dd>
+          <dt class="col-5">Phone</dt><dd class="col-7"><a href="tel:{{ booking.guest.phone }}">{{ booking.guest.phone }}</a></dd>
+          <dt class="col-5">Email</dt><dd class="col-7">{{ booking.guest.email|default:"—" }}</dd>
+          <dt class="col-5">{{ booking.guest.get_id_type_display }}</dt><dd class="col-7">{% if booking.guest.id_number %}{{ booking.guest.id_number }}{% else %}<span class="text-danger">Not captured</span>{% endif %}</dd>
+          <dt class="col-5">Nationality</dt><dd class="col-7">{{ booking.guest.nationality }}</dd>
+          {% if booking.guest.company %}<dt class="col-5">Company</dt><dd class="col-7">{{ booking.guest.company }}</dd>{% endif %}
+        </dl>
+        {% if booking.guest.notes %}<div class="small mt-2 text-body-secondary">{{ booking.guest.notes }}</div>{% endif %}
+      </div></div></div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center"><span>Folio – charges</span>
+        <span class="small text-body-secondary">Room nights are posted by night audit and at check-out</span></div>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="text-end">Qty</th><th class="text-end">Unit</th><th class="text-end">Amount</th><th></th></tr></thead>
+        <tbody>
+        {% for c in charges %}
+          <tr class="{% if c.is_void %}void-row{% endif %}">
+            <td class="small">{{ c.service_date|date:"d M" }}</td>
+            <td>{{ c.description }}{% if c.is_void %}<div class="small">Void: {{ c.void_reason }} ({{ c.voided_by }})</div>{% endif %}</td>
+            <td class="small">{{ c.get_category_display }}</td>
+            <td class="text-end">{{ c.quantity|floatformat:"-2" }}</td><td class="text-end money">{{ c.unit_price|money }}</td>
+            <td class="text-end money">{{ c.amount|money }}</td>
+            <td class="text-end">{% if can_void and not c.is_void and not c.pos_order_id %}<button class="btn btn-sm btn-link text-danger p-0" data-void-url="{% url 'bookings:charge_void' booking.pk c.pk %}" data-void-label="{{ c.description }}" data-bs-toggle="modal" data-bs-target="#voidModal">Void</button>{% endif %}</td>
+          </tr>
+        {% empty %}<tr><td colspan="7" class="text-body-secondary small">No charges posted yet.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">Payments</div>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Receipt</th><th>Date</th><th>Method</th><th>Reference</th><th>By</th><th class="text-end">Amount</th><th></th></tr></thead>
+        <tbody>
+        {% for p in payments %}
+          <tr class="{% if p.is_void %}void-row{% endif %}">
+            <td><a href="{% url 'bookings:receipt' p.pk %}" target="_blank">{{ p.receipt_number }}</a>{% if p.kind == "REFUND" %} <span class="badge text-bg-danger">Refund</span>{% endif %}</td>
+            <td class="small">{{ p.created_at|date:"d M H:i" }}</td>
+            <td>{{ p.get_method_display }}</td><td class="small">{{ p.reference|default:"—" }}{% if p.notes %}<div class="text-body-secondary">{{ p.notes }}</div>{% endif %}{% if p.is_void %}<div>Void: {{ p.void_reason }}</div>{% endif %}</td>
+            <td class="small">{{ p.received_by|default:"Online" }}</td>
+            <td class="text-end money">{% if p.kind == "REFUND" %}-{% endif %}{{ p.amount|money }}</td>
+            <td class="text-end">{% if can_void and not p.is_void %}<button class="btn btn-sm btn-link text-danger p-0" data-void-url="{% url 'bookings:payment_void' p.pk %}" data-void-label="{{ p.receipt_number }}" data-bs-toggle="modal" data-bs-target="#voidModal">Void</button>{% endif %}</td>
+          </tr>
+        {% empty %}<tr><td colspan="7" class="text-body-secondary small">No payments yet.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+      <div class="card-body border-top">
+        <div class="row text-center g-2">
+          <div class="col"><div class="small text-body-secondary">Posted charges</div><div class="fw-semibold money">{{ charges_total|money }}</div></div>
+          <div class="col"><div class="small text-body-secondary">Paid</div><div class="fw-semibold money text-success">{{ payments_total|money }}</div></div>
+          <div class="col"><div class="small text-body-secondary">Balance now</div><div class="fw-bold money {% if balance > 0 %}text-danger{% elif balance < 0 %}text-success{% endif %}">{{ balance|money }}</div></div>
+          {% if booking.is_active %}
+          <div class="col border-start"><div class="small text-body-secondary">Projected stay total</div><div class="fw-semibold money">{{ projected_total|money }}</div></div>
+          <div class="col"><div class="small text-body-secondary">Due by check-out</div><div class="fw-bold money text-primary">{{ amount_due|money }}</div></div>
+          {% endif %}
+        </div>
+        {% if balance < 0 and not booking.is_active %}<div class="alert alert-info small mt-3 mb-0">The guest has a credit of KES {{ balance|negate|money }}. Record a refund or carry it to a new booking.</div>{% endif %}
+      </div>
+    </div>
+
+    {% if mpesa_transactions %}
+    <div class="card mb-3"><div class="card-header">M-Pesa prompts</div>
+      <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Time</th><th>Phone</th><th class="text-end">Amount</th><th>Status</th><th>Receipt</th><th>Details</th></tr></thead><tbody>
+      {% for tx in mpesa_transactions %}<tr><td class="small">{{ tx.created_at|date:"d M H:i:s" }}</td><td class="small">{{ tx.phone }}</td><td class="text-end money">{{ tx.amount|money:0 }}</td>
+        <td>{% status_badge tx %}{% if tx.is_simulated %} <span class="badge text-bg-light">sim</span>{% endif %}</td><td>{{ tx.mpesa_receipt|default:"—" }}</td>
+        <td class="small">{% if nav.finance or nav.front_desk %}<a href="{% url 'mpesa:detail' tx.pk %}">{{ tx.result_desc|truncatechars:50|default:"view" }}</a>{% endif %}</td></tr>{% endfor %}
+      </tbody></table></div></div>
+    {% endif %}
+
+    {% if pos_orders or hk_tasks %}
+    <div class="row g-3">
+      {% if pos_orders %}<div class="col-md-6"><div class="card h-100"><div class="card-header">Restaurant &amp; bar orders</div><ul class="list-group list-group-flush">
+        {% for o in pos_orders %}<li class="list-group-item d-flex justify-content-between small"><a href="{% url 'pos:order' o.pk %}">{{ o.number }} · {{ o.get_outlet_display }}</a><span>{% status_badge o %} <span class="money">{{ o.total|money }}</span></span></li>{% endfor %}
+      </ul></div></div>{% endif %}
+      {% if hk_tasks %}<div class="col-md-6"><div class="card h-100"><div class="card-header">Housekeeping</div><ul class="list-group list-group-flush">
+        {% for t in hk_tasks %}<li class="list-group-item d-flex justify-content-between small"><span>{{ t.get_task_type_display }} · Room {{ t.room.number }}</span>{% status_badge t %}</li>{% endfor %}
+      </ul></div></div>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-xl-4">
+    {% if can_take_payment and booking.status != "CANCELLED" or can_take_payment and balance > 0 %}
+    <div class="card mb-3">
+      <div class="card-header p-0">
+        <ul class="nav nav-tabs card-header-tabs payment-tabs m-0 px-2 pt-2 flex-nowrap" role="tablist">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-mpesa" type="button"><i class="bi bi-phone text-success"></i> M-Pesa</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-pay" type="button">Record</button></li>
+          {% if can_front_desk %}<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-charge" type="button">Charge</button></li>{% endif %}
+          {% if can_void %}<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-refund" type="button">Refund</button></li>{% endif %}
+        </ul>
+      </div>
+      <div class="card-body tab-content">
+        <div class="tab-pane fade show active" id="tab-mpesa">
+          <p class="small text-body-secondary">Send an STK push – the guest gets a PIN prompt on their phone and the payment posts to this folio automatically.</p>
+          <form method="post" action="{% url 'mpesa:stk_start' %}" data-once>{% csrf_token %}
+            <input type="hidden" name="booking" value="{{ booking.pk }}">
+            {% include "partials/field.html" with field=mpesa_form.phone col="mb-2" %}
+            {% include "partials/field.html" with field=mpesa_form.amount col="mb-3" %}
+            <button class="btn btn-success w-100" data-loading="Sending prompt…"><i class="bi bi-send"></i> Send M-Pesa prompt</button>
+          </form>
+          <p class="small text-body-secondary mt-2 mb-0">Guest paid via Paybill instead? Use <em>Record</em> with method M-Pesa and the code – it links to the Paybill entry automatically.</p>
+        </div>
+        <div class="tab-pane fade" id="tab-pay">
+          <form method="post" action="{% url 'bookings:payment_add' booking.pk %}" data-once>{% csrf_token %}
+            <div class="row g-2">
+              {% include "partials/field.html" with field=payment_form.method col="col-12" %}
+              {% include "partials/field.html" with field=payment_form.amount col="col-12" %}
+              {% include "partials/field.html" with field=payment_form.reference col="col-12" %}
+              {% include "partials/field.html" with field=payment_form.notes col="col-12" %}
+            </div>
+            <button class="btn btn-primary w-100 mt-3">Record payment</button>
+          </form>
+        </div>
+        {% if can_front_desk %}
+        <div class="tab-pane fade" id="tab-charge">
+          <form method="post" action="{% url 'bookings:charge_add' booking.pk %}" data-once>{% csrf_token %}
+            <div class="row g-2">
+              {% include "partials/field.html" with field=charge_form.category col="col-12" %}
+              {% include "partials/field.html" with field=charge_form.description col="col-12" %}
+              {% include "partials/field.html" with field=charge_form.quantity col="col-6" %}
+              {% include "partials/field.html" with field=charge_form.unit_price col="col-6" %}
+              {% include "partials/field.html" with field=charge_form.service_date col="col-12" %}
+            </div>
+            <button class="btn btn-outline-primary w-100 mt-3">Post charge</button>
+            <div class="form-text">Choose "Discount / adjustment" to credit the folio.</div>
+          </form>
+        </div>
+        {% endif %}
+        {% if can_void %}
+        <div class="tab-pane fade" id="tab-refund">
+          <form method="post" action="{% url 'bookings:payment_refund' booking.pk %}" onsubmit="return confirm('Record this refund?')">{% csrf_token %}
+            <div class="row g-2">
+              {% include "partials/field.html" with field=refund_form.method col="col-12" %}
+              {% include "partials/field.html" with field=refund_form.amount col="col-12" %}
+              {% include "partials/field.html" with field=refund_form.reference col="col-12" %}
+              {% include "partials/field.html" with field=refund_form.notes col="col-12" %}
+            </div>
+            <button class="btn btn-outline-danger w-100 mt-3">Record refund</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    <div class="card"><div class="card-body small text-body-secondary">
+      <div><i class="bi bi-info-circle"></i> Guest self-service link (share by SMS/WhatsApp so they can pay online):</div>
+      <input class="form-control form-control-sm mt-2" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'website:booking' booking.public_token %}" onclick="this.select()">
+    </div></div>
+  </div>
+</div>
+
+{# ---------------------------------------------------------------- modals #}
+<div class="modal fade" id="checkInModal" tabindex="-1"><div class="modal-dialog"><form class="modal-content" method="post" action="{% url 'bookings:check_in' booking.pk %}">{% csrf_token %}
+  <div class="modal-header"><h5 class="modal-title">Check in {{ booking.guest }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <p>Room <strong>{{ booking.room.number }}</strong> is {% status_badge booking.room "hk_status" %}{% if booking.room.is_out_of_order %} <span class="badge text-bg-dark">Out of order</span>{% endif %}.</p>
+    {% if not booking.guest.id_number and hotel.require_guest_id_at_checkin %}<div class="alert alert-warning small">ID/passport number is missing. <a href="{% url 'bookings:guest_edit' booking.guest.pk %}?next={{ request.path }}">Capture it first</a>.</div>{% endif %}
+    {% if booking.deposit_outstanding > 0 %}<div class="alert alert-info small">Deposit outstanding: KES {{ booking.deposit_outstanding|money }}.</div>{% endif %}
+    {% if not room_ready %}
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="override_dirty" value="1" id="override_dirty">
+      <label class="form-check-label" for="override_dirty">The room has been inspected and is ready (override housekeeping status)</label></div>
+    {% endif %}
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button><button class="btn btn-success">Check in</button></div>
+</form></div></div>
+
+<div class="modal fade" id="checkOutModal" tabindex="-1"><div class="modal-dialog"><form class="modal-content" method="post" action="{% url 'bookings:check_out' booking.pk %}">{% csrf_token %}
+  <div class="modal-header"><h5 class="modal-title">Check out {{ booking.guest }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <p>Any un-posted room nights up to today will be charged automatically. Amount due by check-out: <strong>KES {{ amount_due|money }}</strong>.</p>
+    {% if amount_due > 0 %}
+      {% if can_override %}
+      <div class="form-check"><input class="form-check-input" type="checkbox" name="allow_balance" value="1" id="allow_balance">
+        <label class="form-check-label" for="allow_balance">Manager override: allow check-out with an unpaid balance (city ledger)</label></div>
+      {% elif not allow_balance_checkout %}
+      <div class="alert alert-warning small mb-0">Collect the balance first (M-Pesa prompt or record payment), or ask a manager to override.</div>
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button><button class="btn btn-danger">Check out</button></div>
+</form></div></div>
+
+<div class="modal fade" id="cancelModal" tabindex="-1"><div class="modal-dialog"><form class="modal-content" method="post" action="{% url 'bookings:cancel' booking.pk %}">{% csrf_token %}
+  <div class="modal-header"><h5 class="modal-title">Cancel {{ booking.reference }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    {% include "partials/field.html" with field=cancel_form.reason col="mb-3" %}
+    {% include "partials/field.html" with field=cancel_form.fee col="mb-2" %}
+    {% if payments_total > 0 %}<div class="small text-body-secondary">KES {{ payments_total|money }} has been paid. Any amount above the fee stays as a credit you can refund.</div>{% endif %}
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Keep booking</button><button class="btn btn-danger">Cancel booking</button></div>
+</form></div></div>
+
+<div class="modal fade" id="voidModal" tabindex="-1"><div class="modal-dialog"><form class="modal-content" method="post" id="voidForm">{% csrf_token %}
+  <div class="modal-header"><h5 class="modal-title">Void <span id="voidLabel"></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">{% include "partials/field.html" with field=void_form.reason col="" %}<div class="form-text">Voids are kept on record in the audit log.</div></div>
+  <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button><button class="btn btn-danger">Void</button></div>
+</form></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("voidModal").addEventListener("show.bs.modal", function (e) {
+  const btn = e.relatedTarget;
+  document.getElementById("voidForm").action = btn.dataset.voidUrl;
+  document.getElementById("voidLabel").textContent = btn.dataset.voidLabel;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base_site.html" %}
+{% load hotel %}
+{% block title %}{{ rt.name }}{% endblock %}
+{% block meta_description %}{{ rt.name }} at {{ hotel.name }} – from KES {{ rt.base_rate|money:0 }} per night. {{ rt.description|truncatewords:20 }}{% endblock %}
+{% block content %}
+<section class="section pt-4"><div class="container">
+  <nav aria-label="breadcrumb"><ol class="breadcrumb small"><li class="breadcrumb-item"><a href="{% url 'website:rooms' %}">Rooms</a></li><li class="breadcrumb-item active">{{ rt.name }}</li></ol></nav>
+  <div class="row g-5">
+    <div class="col-lg-7">
+      {% if rt.image_url %}<img src="{{ rt.image_url }}" alt="{{ rt.name }}" class="room-img rounded-4 mb-4">{% else %}<div class="room-img-placeholder rounded-4 mb-4"><i class="bi bi-door-open"></i></div>{% endif %}
+      <h1 class="mb-2">{{ rt.name }}</h1>
+      <div class="text-body-secondary mb-3"><i class="bi bi-people"></i> Up to {{ rt.max_adults }} adult{{ rt.max_adults|pluralize }}{% if rt.max_children %} + {{ rt.max_children }} child{{ rt.max_children|pluralize:"ren" }}{% endif %} · <i class="bi bi-moon"></i> {{ rt.bed_type }}{% if rt.size_sqm %} · <i class="bi bi-arrows-angle-expand"></i> {{ rt.size_sqm }} m²{% endif %}</div>
+      <p>{{ rt.description|linebreaksbr }}</p>
+      {% if rt.amenity_list %}<h2 class="h5 mt-4">Amenities</h2><div>{% for a in rt.amenity_list %}<span class="amenity"><i class="bi bi-check2"></i> {{ a }}</span>{% endfor %}</div>{% endif %}
+      {% if seasons %}<h2 class="h5 mt-4">Seasonal prices</h2><ul class="small text-body-secondary">{% for s in seasons %}<li>{{ s.name }} ({{ s.start_date|date:"j M" }} – {{ s.end_date|date:"j M Y" }}): KES {{ s.rate|money:0 }}/night</li>{% endfor %}</ul>{% endif %}
+    </div>
+    <div class="col-lg-5">
+      <div class="card summary-card"><div class="card-body p-4">
+        <div class="mb-3"><span class="small text-body-secondary">from</span> <span class="price-tag fs-3">KES {{ rt.base_rate|money:0 }}</span> <span class="small text-body-secondary">/ night</span></div>
+        {% if hotel.website_booking_enabled %}
+        <form method="get" action="{% url 'website:search' %}">
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label small">Check-in</label>{{ search_form.check_in }}</div>
+            <div class="col-6"><label class="form-label small">Check-out</label>{{ search_form.check_out }}</div>
+            <div class="col-6"><label class="form-label small">Adults</label>{{ search_form.adults }}</div>
+            <div class="col-6"><label class="form-label small">Children</label>{{ search_form.children }}</div>
+          </div>
+          <button class="btn btn-brand w-100 mt-3">Check availability</button>
+        </form>
+        {% else %}<a href="{% url 'website:contact' %}" class="btn btn-brand w-100">Contact us to book</a>{% endif %}
+        <ul class="list-unstyled small text-body-secondary mt-3 mb-0">
+          <li><i class="bi bi-clock"></i> Check-in from {{ hotel.check_in_time|time:"H:i" }}, check-out by {{ hotel.check_out_time|time:"H:i" }}</li>
+          <li><i class="bi bi-phone"></i> Secure M-Pesa payment</li>
+        </ul>
+      </div></div>
+    </div>
+  </div>
+  {% if others %}
+  <h2 class="h4 mt-5 mb-3">You might also like</h2>
+  <div class="row g-4">{% for rt in others %}<div class="col-md-4">{% include "website/_room_card.html" %}</div>{% endfor %}</div>
+  {% endif %}
+</div></section>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base_staff.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_title %}Hotel settings{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-7"><div class="card"><div class="card-header">Property &amp; policies</div><div class="card-body">
+    <form method="post">{% csrf_token %}
+      {% include "partials/form.html" %}
+      <button class="btn btn-primary mt-3">Save settings</button>
+    </form>
+  </div></div></div>
+  <div class="col-xl-5">
+    <div class="card mb-3"><div class="card-header d-flex justify-content-between"><span>M-Pesa (Daraja) configuration</span>
+      <span class="badge {% if mpesa.simulate %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ mpesa_mode }}</span></div>
+      <div class="card-body small">
+        <p class="text-body-secondary">These values come from environment variables (see <code>.env.example</code> and the README) so secrets never live in the database.</p>
+        <dl class="row mb-2">
+          <dt class="col-5">Environment</dt><dd class="col-7">{{ mpesa.environment }}</dd>
+          <dt class="col-5">Credentials</dt><dd class="col-7">{% if mpesa.credentials %}<span class="text-success">Configured</span>{% else %}<span class="text-danger">Missing</span>{% endif %}</dd>
+          <dt class="col-5">Shortcode</dt><dd class="col-7">{{ mpesa.shortcode }}</dd>
+          <dt class="col-5">Type</dt><dd class="col-7">{{ mpesa.transaction_type }}{% if mpesa.till %} (till {{ mpesa.till }}){% endif %}</dd>
+          <dt class="col-5">STK callback</dt><dd class="col-7 text-break"><code>{{ mpesa.callback_url }}</code></dd>
+          <dt class="col-5">C2B confirmation</dt><dd class="col-7 text-break"><code>{{ mpesa.c2b.confirmation }}</code></dd>
+          <dt class="col-5">C2B validation</dt><dd class="col-7 text-break"><code>{{ mpesa.c2b.validation }}</code></dd>
+        </dl>
+        {% if mpesa.simulate %}<div class="alert alert-warning py-2 mb-2">Simulation mode is on: STK pushes are not sent to Safaricom. Set <code>MPESA_CONSUMER_KEY</code> and <code>MPESA_CONSUMER_SECRET</code> to go live (sandbox first).</div>{% endif %}
+        {% if not mpesa.callback_is_https %}<div class="alert alert-danger py-2 mb-2">Callbacks must be a public <strong>https</strong> URL. Set <code>MPESA_CALLBACK_BASE_URL</code> (e.g. your domain or an ngrok tunnel).</div>{% endif %}
+        {% if mpesa.default_token %}<div class="alert alert-danger py-2 mb-0">Change <code>MPESA_CALLBACK_TOKEN</code> to a long random value before going live.</div>{% endif %}
+      </div></div>
+    <div class="card"><div class="card-header">Scheduled jobs</div><div class="card-body small">
+      <p class="mb-2">Run these from cron (or your host's scheduler):</p>
+      <pre class="payload mb-2">python manage.py night_audit          # daily ~23:30
+python manage.py expire_holds         # every 5 minutes
+python manage.py mpesa_check_pending  # every 2 minutes</pre>
+      <p class="mb-0 text-body-secondary">The system also does these lazily when staff or guests use it, so nothing breaks if cron is missing.</p>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

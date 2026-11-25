@@ -1,0 +1,21 @@
+{% load hotel %}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Bill {{ order.number }}</title>
+<style>body{font-family:ui-monospace,Menlo,Consolas,monospace;background:#f1f5f9;font-size:13px}.slip{width:320px;margin:24px auto;background:#fff;padding:20px}
+.c{text-align:center}.row{display:flex;justify-content:space-between;gap:8px}hr{border:none;border-top:1px dashed #999}@media print{body{background:#fff}.slip{margin:0;width:auto}.no-print{display:none}}</style></head>
+<body><div class="slip">
+  <div class="no-print c" style="margin-bottom:10px"><button onclick="window.print()">Print</button></div>
+  <div class="c"><strong>{{ hotel.name|upper }}</strong><br>{{ order.get_outlet_display }}<br>{{ hotel.phone }}</div><hr>
+  <div class="row"><span>Bill</span><span>{{ order.number }}</span></div>
+  <div class="row"><span>Date</span><span>{{ order.created_at|date:"d/m/Y H:i" }}</span></div>
+  {% if order.table_number %}<div class="row"><span>Table</span><span>{{ order.table_number }}</span></div>{% endif %}
+  {% if order.booking %}<div class="row"><span>Room</span><span>{{ order.booking.room.number }} – {{ order.booking.guest }}</span></div>{% endif %}
+  <hr>
+  {% for line in items %}<div class="row"><span>{{ line.quantity }} x {{ line.name }}</span><span>{{ line.amount|money }}</span></div>{% endfor %}
+  <hr>
+  {% if order.discount %}<div class="row"><span>Discount</span><span>-{{ order.discount|money }}</span></div>{% endif %}
+  <div class="row" style="font-size:16px"><strong>TOTAL KES</strong><strong>{{ order.total|money }}</strong></div>
+  {% if hotel.show_tax_breakdown %}<div class="row"><span>Incl. VAT {{ hotel.vat_rate|floatformat:"-2" }}% &amp; levy</span><span></span></div>{% endif %}
+  {% for p in payments %}<div class="row"><span>{{ p.get_method_display }} {{ p.reference }}</span><span>{{ p.amount|money }}</span></div>{% endfor %}
+  {% if order.status == "CHARGED" %}<div class="c"><br>CHARGED TO ROOM {{ order.booking.room.number }}<br><br>Guest signature: ____________</div>{% endif %}
+  <hr><div class="c">Served by {{ order.created_by|default:"—" }}<br>Asante sana!</div>
+</div></body></html>

@@ -1,0 +1,26 @@
+{% load hotel %}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receipt {{ payment.receipt_number }}</title>
+<style>body{font-family:ui-monospace,Menlo,Consolas,monospace;background:#f1f5f9;font-size:13px}.slip{width:320px;margin:24px auto;background:#fff;padding:20px}
+.c{text-align:center}.row{display:flex;justify-content:space-between}hr{border:none;border-top:1px dashed #999}
+@media print{body{background:#fff}.slip{margin:0;width:auto}.no-print{display:none}}</style></head>
+<body><div class="slip">
+  <div class="no-print c" style="margin-bottom:10px"><button onclick="window.print()">Print</button></div>
+  <div class="c"><strong>{{ hotel.name|upper }}</strong><br>{{ hotel.address }}<br>{{ hotel.phone }}{% if hotel.kra_pin %}<br>PIN {{ hotel.kra_pin }}{% endif %}</div>
+  <hr>
+  <div class="c"><strong>{% if payment.kind == "REFUND" %}REFUND{% else %}PAYMENT RECEIPT{% endif %}</strong>{% if payment.is_void %}<br>*** VOID ***{% endif %}</div>
+  <hr>
+  <div class="row"><span>Receipt</span><span>{{ payment.receipt_number }}</span></div>
+  <div class="row"><span>Date</span><span>{{ payment.created_at|date:"d/m/Y H:i" }}</span></div>
+  {% if payment.booking %}<div class="row"><span>Booking</span><span>{{ payment.booking.reference }}</span></div>
+  <div class="row"><span>Guest</span><span>{{ payment.booking.guest }}</span></div>
+  <div class="row"><span>Room</span><span>{{ payment.booking.room.number }}</span></div>{% endif %}
+  {% if payment.order %}<div class="row"><span>Order</span><span>{{ payment.order.number }}</span></div>{% endif %}
+  <div class="row"><span>Method</span><span>{{ payment.get_method_display }}</span></div>
+  {% if payment.reference %}<div class="row"><span>Ref</span><span>{{ payment.reference }}</span></div>{% endif %}
+  <hr>
+  <div class="row" style="font-size:16px"><strong>AMOUNT</strong><strong>KES {{ payment.amount|money }}</strong></div>
+  {% if payment.booking %}<div class="row"><span>Balance</span><span>KES {{ payment.booking.balance|money }}</span></div>{% endif %}
+  <hr>
+  <div class="c">Served by {{ payment.received_by|default:"Online" }}<br>{{ hotel.invoice_footer }}</div>
+</div></body></html>

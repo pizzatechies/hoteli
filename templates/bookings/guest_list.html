@@ -1,0 +1,19 @@
+{% extends "base_staff.html" %}
+{% block title %}Guests{% endblock %}
+{% block page_title %}Guests{% endblock %}
+{% block content %}
+<div class="page-actions"><h1>Guests</h1>{% if nav.front_desk %}<a href="{% url 'bookings:guest_create' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Add guest</a>{% endif %}</div>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-6"><input name="q" value="{{ q }}" class="form-control" placeholder="Name, phone, email, ID, company"></div>
+  <div class="col-md-3"><select name="flag" class="form-select"><option value="">All guests</option><option value="vip" {% if flag == 'vip' %}selected{% endif %}>VIP</option><option value="blacklisted" {% if flag == 'blacklisted' %}selected{% endif %}>Blacklisted</option></select></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Search</button></div>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>ID</th><th>Nationality</th><th>Added</th></tr></thead>
+  <tbody>{% for g in page %}
+  <tr><td><a href="{% url 'bookings:guest_detail' g.pk %}" class="fw-semibold">{{ g }}</a>{% if g.is_vip %} <span class="badge text-bg-warning">VIP</span>{% endif %}{% if g.is_blacklisted %} <span class="badge text-bg-danger">Blacklisted</span>{% endif %}{% if g.company %}<div class="small text-body-secondary">{{ g.company }}</div>{% endif %}</td>
+    <td>{{ g.phone }}</td><td class="small">{{ g.email|default:"—" }}</td><td class="small">{{ g.id_number|default:"—" }}</td><td>{{ g.nationality }}</td><td class="small">{{ g.created_at|date:"d M Y" }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="text-body-secondary">No guests found.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

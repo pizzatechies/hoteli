@@ -1,0 +1,18 @@
+{% extends "base_staff.html" %}
+{% block title %}Guest register{% endblock %}
+{% block page_title %}Guest register{% endblock %}
+{% block content %}
+<div class="page-actions no-print"><h1>In-house guest register</h1><button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div>
+<div class="card"><div class="card-body">
+  <div class="d-flex justify-content-between mb-3"><div><strong>{{ hotel.name }}</strong><br><span class="small">{{ hotel.address }}</span></div>
+    <div class="text-end small">Printed {{ now|date:"d M Y H:i" }}<br>{{ bookings|length }} guest(s)</div></div>
+  <div class="table-responsive"><table class="table table-sm table-bordered mb-0">
+    <thead><tr><th>Room</th><th>Guest name</th><th>ID type</th><th>ID / passport no.</th><th>Nationality</th><th>Phone</th><th>Arrived</th><th>Departs</th><th>Pax</th><th>Vehicle</th></tr></thead>
+    <tbody>{% for b in bookings %}
+      <tr><td>{{ b.room.number }}</td><td>{{ b.guest }}</td><td>{{ b.guest.get_id_type_display }}</td><td>{{ b.guest.id_number|default:"—" }}</td>
+        <td>{{ b.guest.nationality }}</td><td>{{ b.guest.phone }}</td><td>{{ b.actual_check_in|date:"d M H:i" }}</td><td>{{ b.check_out_date|date:"d M" }}</td>
+        <td>{{ b.adults }}{% if b.children %}+{{ b.children }}{% endif %}</td><td>{{ b.guest.vehicle_registration|default:"—" }}</td></tr>
+    {% empty %}<tr><td colspan="10">No guests in-house.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div></div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base_site.html" %}
+{% load hotel %}
+{% block title %}{{ site.hero_title }}{% endblock %}
+{% block content %}
+<section class="hero" {% if site.hero_image_url %}style="background-image:url('{{ site.hero_image_url }}')"{% else %}style="background:#0f172a"{% endif %}>
+  <div class="container py-5">
+    <div class="row"><div class="col-lg-8">
+      <div class="eyebrow mb-2">Welcome to {{ hotel.name }}</div>
+      <h1 class="mb-3">{{ site.hero_title }}</h1>
+      <p class="lead mb-4" style="color:rgba(255,255,255,.88)">{{ site.hero_subtitle }}</p>
+    </div></div>
+    {% if hotel.website_booking_enabled %}{% include "website/_search_form.html" %}
+    {% else %}<a href="{% url 'website:contact' %}" class="btn btn-brand btn-lg">Contact us to book</a>{% endif %}
+    <div class="d-flex flex-wrap gap-4 mt-4 small" style="color:rgba(255,255,255,.85)">
+      <span><i class="bi bi-shield-check"></i> Best rate when you book direct</span>
+      <span><i class="bi bi-phone"></i> Pay instantly with M-Pesa</span>
+      <span><i class="bi bi-envelope-check"></i> Instant email confirmation</span>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="text-center mb-5"><div class="eyebrow">Stay with us</div><h2 class="section-title">Rooms &amp; suites</h2>
+      <p class="text-body-secondary">Comfortable, spotless rooms for every kind of trip.</p></div>
+    <div class="row g-4">
+      {% for rt in room_types %}<div class="col-md-6 col-lg-4">{% include "website/_room_card.html" %}</div>
+      {% empty %}<p class="text-center text-body-secondary">Room details coming soon.</p>{% endfor %}
+    </div>
+    <div class="text-center mt-4"><a href="{% url 'website:rooms' %}" class="btn btn-outline-dark rounded-pill px-4">All rooms</a></div>
+  </div>
+</section>
+
+{% if facilities %}
+<section class="section bg-brand-soft">
+  <div class="container">
+    <div class="text-center mb-5"><div class="eyebrow">Everything you need</div><h2 class="section-title">Facilities</h2></div>
+    <div class="row g-3">
+      {% for f in facilities %}<div class="col-6 col-md-3"><div class="facility"><i class="bi bi-{{ f.icon }}"></i><h3 class="h6 mt-2 mb-1" style="font-family:inherit">{{ f.name }}</h3><p class="small text-body-secondary mb-0">{{ f.description }}</p></div></div>{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="container"><div class="row g-5 align-items-center">
+    <div class="col-lg-6">
+      <div class="eyebrow">{{ site.about_title }}</div>
+      <h2 class="section-title mb-3">{{ hotel.tagline }}</h2>
+      <p class="text-body-secondary">{{ site.about_text|linebreaksbr }}</p>
+      <div class="d-flex gap-2 flex-wrap mt-3">
+        <a href="{% url 'website:dining' %}" class="btn btn-outline-dark rounded-pill"><i class="bi bi-cup-hot"></i> See our menu</a>
+        <a href="{% url 'website:contact' %}" class="btn btn-link">Get in touch &rarr;</a>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-4">
+        <h3 class="h5 mb-3"><i class="bi bi-phone text-success"></i> Book &amp; pay in 3 easy steps</h3>
+        <ol class="mb-0 text-body-secondary">
+          <li class="mb-2">Choose your dates and room.</li>
+          <li class="mb-2">Enter your details and M-Pesa number.</li>
+          <li>Approve the M-Pesa prompt on your phone – your booking is confirmed instantly.</li>
+        </ol>
+        <div class="small mt-3">Already booked? <a href="{% url 'website:lookup' %}">Manage your booking</a>.</div>
+      </div></div>
+    </div>
+  </div></div>
+</section>
+{% endblock %}

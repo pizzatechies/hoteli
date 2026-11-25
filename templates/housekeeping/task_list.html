@@ -1,0 +1,33 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Housekeeping tasks{% endblock %}
+{% block page_title %}Housekeeping tasks{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <form class="d-flex gap-2" method="get">
+    <select name="status" class="form-select" onchange="this.form.submit()">
+      <option value="open" {% if status == 'open' %}selected{% endif %}>Open</option>
+      {% for v, l in statuses %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      <option value="" {% if status == '' %}selected{% endif %}>All</option>
+    </select>
+    <div class="form-check align-self-center text-nowrap"><input class="form-check-input" type="checkbox" name="mine" value="1" id="mine" {% if mine %}checked{% endif %} onchange="this.form.submit()"><label for="mine" class="form-check-label">Mine only</label></div>
+  </form>
+  <a href="{% url 'housekeeping:task_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New task</a>
+</div>
+<div class="card"><div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>Room</th><th>Task</th><th>Priority</th><th>Status</th><th>Assigned</th><th>Due</th><th></th></tr></thead>
+  <tbody>{% for t in page %}<tr>
+    <td class="fw-semibold">{{ t.room.number }}</td><td>{{ t.get_task_type_display }}{% if t.notes %}<div class="small text-body-secondary">{{ t.notes }}</div>{% endif %}</td>
+    <td>{% status_badge t "priority" %}</td><td>{% status_badge t %}</td><td>{{ t.assigned_to|default:"—" }}</td><td class="small">{{ t.due_date|date:"d M"|default:"—" }}</td>
+    <td class="text-end text-nowrap">
+      {% if t.is_open %}
+      {% if not t.assigned_to %}<form class="d-inline" method="post" action="{% url 'housekeeping:task_action' t.pk 'claim' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Claim</button></form>{% endif %}
+      {% if t.status == "PENDING" %}<form class="d-inline" method="post" action="{% url 'housekeeping:task_action' t.pk 'start' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">Start</button></form>{% endif %}
+      <form class="d-inline" method="post" action="{% url 'housekeeping:task_action' t.pk 'done' %}">{% csrf_token %}<button class="btn btn-sm btn-success">Done</button></form>
+      <a href="{% url 'housekeeping:task_edit' t.pk %}" class="btn btn-sm btn-light">Edit</a>
+      {% else %}<span class="small text-body-secondary">{{ t.completed_at|date:"d M H:i" }}</span>{% endif %}
+    </td></tr>
+  {% empty %}<tr><td colspan="7" class="text-body-secondary">No tasks.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

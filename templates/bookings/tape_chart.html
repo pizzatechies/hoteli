@@ -1,0 +1,41 @@
+{% extends "base_staff.html" %}
+{% block title %}Room calendar{% endblock %}
+{% block page_title %}Room calendar{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <a href="?start={{ prev|date:'Y-m-d' }}&days={{ days }}" class="btn btn-light"><i class="bi bi-chevron-left"></i></a>
+    <a href="?days={{ days }}" class="btn btn-light">Today</a>
+    <a href="?start={{ next|date:'Y-m-d' }}&days={{ days }}" class="btn btn-light"><i class="bi bi-chevron-right"></i></a>
+    <form method="get" class="d-flex gap-2"><input type="date" name="start" value="{{ start|date:'Y-m-d' }}" class="form-control" onchange="this.form.submit()">
+      <select name="days" class="form-select" onchange="this.form.submit()">
+        <option value="7" {% if days == 7 %}selected{% endif %}>7 days</option><option value="14" {% if days == 14 %}selected{% endif %}>14 days</option><option value="31" {% if days == 31 %}selected{% endif %}>31 days</option></select></form>
+  </div>
+  <div class="small d-flex gap-3 flex-wrap">
+    <span><span class="legend-dot" style="background:#f59e0b"></span>Pending</span><span><span class="legend-dot" style="background:#2563eb"></span>Confirmed</span>
+    <span><span class="legend-dot" style="background:#16a34a"></span>In-house</span><span><span class="legend-dot" style="background:#94a3b8"></span>Checked out</span>
+  </div>
+</div>
+<div class="card"><div class="table-responsive">
+<table class="table table-bordered tape mb-0">
+  <thead><tr><th class="room-col">Room</th>{% for d in dates %}<th class="day-col {% if d == today %}today{% elif d.weekday >= 5 %}weekend{% endif %}">{{ d|date:"D" }}<br>{{ d|date:"d M" }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in rows %}
+  <tr>
+    <th class="room-col"><span class="fw-bold">{{ row.room.number }}</span> <span class="small text-body-secondary d-block">{{ row.room.room_type.name|truncatechars:16 }}{% if row.room.is_out_of_order %} · <span class="text-danger">OOO</span>{% endif %}</span></th>
+    {% for cell in row.cells %}
+      {% if cell.booking %}
+      <td colspan="{{ cell.span }}" class="stay stay-{{ cell.booking.status }}">
+        <a href="{% url 'bookings:detail' cell.booking.pk %}" class="{% if cell.cut_left %}cut-left{% endif %} {% if cell.cut_right %}cut-right{% endif %}" title="{{ cell.booking.guest }} · {{ cell.booking.reference }} · {{ cell.booking.check_in_date|date:'d M' }}–{{ cell.booking.check_out_date|date:'d M' }}">{{ cell.booking.guest }}</a>
+      </td>
+      {% elif cell.past %}<td class="past"></td>
+      {% else %}
+      <td class="free {% if cell.date == today %}today{% endif %}">{% if nav.front_desk %}<a href="{% url 'bookings:create' %}?room={{ row.room.pk }}&check_in={{ cell.date|date:'Y-m-d' }}" title="Book room {{ row.room.number }} from {{ cell.date|date:'d M' }}">+</a>{% endif %}</td>
+      {% endif %}
+    {% endfor %}
+  </tr>
+  {% empty %}<tr><td colspan="{{ days|add:1 }}" class="text-body-secondary">No rooms set up yet.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+<p class="small text-body-secondary mt-2">Click an empty cell to book that room from that date. Click a stay to open the booking.</p>
+{% endblock %}

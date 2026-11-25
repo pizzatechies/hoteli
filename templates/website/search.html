@@ -1,0 +1,44 @@
+{% extends "base_site.html" %}
+{% load hotel %}
+{% block title %}Check availability{% endblock %}
+{% block content %}
+<section class="page-header"><div class="container">
+  <div class="steps mb-3"><span class="step active"><span class="num">1</span> Choose room</span><span class="step"><span class="num">2</span> Your details</span><span class="step"><span class="num">3</span> Pay with M-Pesa</span></div>
+  <h1 class="h2 mb-3">Check availability</h1>
+  {% include "website/_search_form.html" %}
+</div></section>
+<section class="section pt-4"><div class="container">
+  {% if not booking_enabled %}<div class="alert alert-info">Online booking is paused right now. Please <a href="{% url 'website:contact' %}">contact us</a> to book.</div>{% endif %}
+  {% if results is not None %}
+    {% with d=search_form.cleaned_data %}
+    <p class="text-body-secondary">{{ d.check_in|date:"D j M" }} → {{ d.check_out|date:"D j M Y" }} · {{ d.adults }} adult{{ d.adults|pluralize }}{% if d.children %}, {{ d.children }} child{{ d.children|pluralize:"ren" }}{% endif %}</p>
+    {% endwith %}
+    {% for r in results %}
+    <div class="card room-card mb-3"><div class="row g-0">
+      <div class="col-md-4">{% if r.room_type.image_url %}<img src="{{ r.room_type.image_url }}" alt="{{ r.room_type.name }}" class="h-100" style="object-fit:cover">{% else %}<div class="room-img-placeholder h-100"><i class="bi bi-door-open"></i></div>{% endif %}</div>
+      <div class="col-md-8"><div class="card-body p-4 d-flex flex-column h-100">
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+          <div><h2 class="h4 mb-1">{{ r.room_type.name }}</h2>
+            <div class="small text-body-secondary">Sleeps {{ r.room_type.max_adults }} adult{{ r.room_type.max_adults|pluralize }}{% if r.room_type.max_children %} + {{ r.room_type.max_children }} child{{ r.room_type.max_children|pluralize:"ren" }}{% endif %} · {{ r.room_type.bed_type }}</div></div>
+          <div class="text-end"><div class="price-tag fs-4">KES {{ r.total|money:0 }}</div><div class="small text-body-secondary">{{ r.nights }} night{{ r.nights|pluralize }} · avg {{ r.nightly|money:0 }}/night</div></div>
+        </div>
+        <div class="my-2">{% for a in r.room_type.amenity_list|slice:":6" %}<span class="amenity">{{ a }}</span>{% endfor %}</div>
+        <div class="mt-auto d-flex justify-content-between align-items-center flex-wrap gap-2">
+          {% if r.available %}
+            <span class="small {% if r.available <= 2 %}text-danger fw-semibold{% else %}text-success{% endif %}"><i class="bi bi-check-circle"></i> {% if r.available <= 2 %}Only {{ r.available }} left!{% else %}Available{% endif %}</span>
+            {% if booking_enabled %}<a href="{% url 'website:book' r.room_type.pk %}?{{ query }}" class="btn btn-brand">Book this room</a>{% endif %}
+          {% else %}
+            <span class="small text-danger"><i class="bi bi-x-circle"></i> Sold out for these dates</span>
+            <a href="{% url 'website:contact' %}" class="btn btn-outline-secondary btn-sm">Ask about alternatives</a>
+          {% endif %}
+        </div>
+      </div></div>
+    </div></div>
+    {% empty %}
+    <div class="alert alert-warning">No rooms can accommodate this party. Try fewer guests per room or <a href="{% url 'website:contact' %}">contact us</a> for group bookings.</div>
+    {% endfor %}
+  {% else %}
+    <p class="text-body-secondary">Choose your dates above to see available rooms and prices.</p>
+  {% endif %}
+</div></section>
+{% endblock %}

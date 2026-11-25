@@ -1,0 +1,65 @@
+{% extends "base_staff.html" %}
+{% load static %}
+{% block title %}{% if booking %}Edit {{ booking.reference }}{% else %}New booking{% endif %}{% endblock %}
+{% block page_title %}{% if booking %}Edit booking {{ booking.reference }}{% else %}New booking{% endif %}{% endblock %}
+{% block content %}
+<form method="post" id="booking-form" novalidate
+      data-availability-url="{% url 'bookings:availability' %}" data-guest-search-url="{% url 'bookings:guest_search' %}"
+      {% if booking %}data-exclude="{{ booking.pk }}"{% endif %}
+      {% if selected_guest %}data-preselected='{"id": {{ selected_guest.pk }}, "name": "{{ selected_guest.full_name|escapejs }}", "phone": "{{ selected_guest.phone|escapejs }}", "id_number": "{{ selected_guest.id_number|escapejs }}", "vip": {{ selected_guest.is_vip|yesno:"true,false" }}, "blacklisted": {{ selected_guest.is_blacklisted|yesno:"true,false" }}}'{% endif %}>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
+  <div class="row g-3">
+    <div class="col-xl-5">
+      {% if booking %}
+      <div class="card mb-3"><div class="card-header">Guest</div><div class="card-body">
+        <strong>{{ booking.guest }}</strong> · {{ booking.guest.phone }}
+        <a href="{% url 'bookings:guest_edit' booking.guest.pk %}?next={% url 'bookings:edit' booking.pk %}" class="small ms-2">Edit guest details</a>
+      </div></div>
+      {% else %}
+      <div class="card mb-3"><div class="card-header">Guest</div><div class="card-body">
+        {{ form.guest }}
+        <div class="guest-search-wrap mb-3">
+          <label class="form-label" for="guest-search">Find an existing guest</label>
+          <input id="guest-search" type="search" class="form-control" placeholder="Name, phone, email or ID number" autocomplete="off">
+          <div id="guest-results" class="list-group mt-1"></div>
+        </div>
+        <div id="guest-chosen" class="mb-2"></div>
+        <div id="new-guest-fields">
+          <div class="small text-body-secondary mb-2">…or register a new guest:</div>
+          <div class="row g-2">
+            {% include "partials/field.html" with field=form.first_name %}
+            {% include "partials/field.html" with field=form.last_name %}
+            {% include "partials/field.html" with field=form.phone %}
+            {% include "partials/field.html" with field=form.email %}
+            {% include "partials/field.html" with field=form.id_type %}
+            {% include "partials/field.html" with field=form.id_number %}
+            {% include "partials/field.html" with field=form.nationality col="col-12" %}
+          </div>
+        </div>
+      </div></div>
+      {% endif %}
+    </div>
+    <div class="col-xl-7">
+      <div class="card"><div class="card-header">Stay</div><div class="card-body"><div class="row g-3">
+        {% include "partials/field.html" with field=form.check_in_date %}
+        {% include "partials/field.html" with field=form.check_out_date %}
+        {% include "partials/field.html" with field=form.adults %}
+        {% include "partials/field.html" with field=form.children %}
+        {% include "partials/field.html" with field=form.room %}
+        {% include "partials/field.html" with field=form.rate %}
+        <div class="col-12"><div id="availability-info" class="small text-body-secondary"></div></div>
+        {% include "partials/field.html" with field=form.source %}
+        {% if form.status %}{% include "partials/field.html" with field=form.status %}{% endif %}
+        {% include "partials/field.html" with field=form.special_requests col="col-12" %}
+        {% include "partials/field.html" with field=form.internal_notes col="col-12" %}
+      </div></div>
+      <div class="card-footer bg-white d-flex gap-2">
+        <button class="btn btn-primary"><i class="bi bi-check2"></i> {% if booking %}Save changes{% else %}Create booking{% endif %}</button>
+        <a href="{% if booking %}{% url 'bookings:detail' booking.pk %}{% else %}{% url 'bookings:list' %}{% endif %}" class="btn btn-light">Cancel</a>
+      </div></div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/booking_form.js' %}"></script>{% endblock %}

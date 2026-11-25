@@ -1,0 +1,115 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}{{ order.number }}{% endblock %}
+{% block page_title %}Order {{ order.number }}{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <h1>{{ order.number }} {% status_badge order %} <span class="fs-6 text-body-secondary">{{ order.get_outlet_display }}{% if order.table_number %} · Table {{ order.table_number }}{% endif %}{% if order.booking %} · Room {{ order.booking.room.number }} ({{ order.booking.guest }}){% endif %}</span></h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'pos:order_bill' order.pk %}" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> Print bill</a>
+    {% if order.status == "OPEN" or order.status == "CHARGED" %}
+    <form method="post" action="{% url 'pos:order_cancel' order.pk %}" onsubmit="const r = prompt('Reason for cancelling?'); if (!r) return false; this.reason.value = r;">{% csrf_token %}<input type="hidden" name="reason"><button class="btn btn-outline-danger">Cancel order</button></form>
+    {% endif %}
+  </div>
+</div>
+{% if active_tx %}{% include "partials/mpesa_status.html" with tx_id=active_tx %}{% endif %}
+<div class="row g-3">
+  {% if order.is_open %}
+  <div class="col-xl-7">
+    <div class="card"><div class="card-header">Menu</div><div class="card-body">
+      <ul class="nav nav-pills mb-3 flex-wrap gap-1" role="tablist">
+        {% for cat in categories %}<li class="nav-item"><button class="nav-link {% if forloop.first %}active{% endif %} btn-sm" data-bs-toggle="pill" data-bs-target="#cat{{ cat.pk }}" type="button">{{ cat.name }}</button></li>{% endfor %}
+      </ul>
+      <div class="tab-content">
+        {% for cat in categories %}
+        <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="cat{{ cat.pk }}"><div class="row g-2">
+          {% for item in cat.items.all %}{% if item.is_available %}
+          <div class="col-6 col-md-4">
+            <form method="post" action="{% url 'pos:order_add_item' order.pk %}" class="h-100">{% csrf_token %}
+              <input type="hidden" name="item" value="{{ item.pk }}">
+              <button class="btn btn-outline-secondary menu-btn w-100"><div class="fw-semibold">{{ item.name }}</div><div class="price">{{ item.price|money:0 }}</div></button>
+            </form>
+          </div>
+          {% endif %}{% empty %}<div class="text-body-secondary small">No items in this category.</div>{% endfor %}
+        </div></div>
+        {% empty %}<div class="text-body-secondary">The menu is empty. {% if nav.management %}<a href="{% url 'pos:menu' %}">Add menu items</a>.{% endif %}</div>
+        {% endfor %}
+      </div>
+    </div></div>
+  </div>
+  {% endif %}
+  <div class="{% if order.is_open %}col-xl-5{% else %}col-xl-8{% endif %}">
+    <div class="card mb-3"><div class="card-header">Items</div>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Item</th><th style="width:120px">Qty</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>{% for line in items %}
+        <tr><td>{{ line.name }}<div class="small text-body-secondary">@ {{ line.unit_price|money }}</div></td>
+          <td>{% if order.is_open %}<form method="post" action="{% url 'pos:order_update_item' order.pk line.pk %}" class="d-flex gap-1">{% csrf_token %}
+            <input type="number" name="quantity" value="{{ line.quantity }}" min="0" class="form-control form-control-sm" style="width:60px" onchange="this.form.submit()">
+            <button name="remove" value="1" class="btn btn-sm btn-link text-danger p-0" title="Remove"><i class="bi bi-trash"></i></button></form>{% else %}{{ line.quantity }}{% endif %}</td>
+          <td class="text-end money">{{ line.amount|money }}</td></tr>
+        {% empty %}<tr><td colspan="3" class="text-body-secondary small">Tap menu items to add them.</td></tr>{% endfor %}</tbody>
+        <tfoot>
+          <tr><td colspan="2" class="text-end">Subtotal</td><td class="text-end money">{{ order.subtotal|money }}</td></tr>
+          {% if order.discount %}<tr><td colspan="2" class="text-end">Discount</td><td class="text-end money">-{{ order.discount|money }}</td></tr>{% endif %}
+          <tr class="fw-bold"><td colspan="2" class="text-end">Total</td><td class="text-end money">{{ order.total|money }}</td></tr>
+          {% if order.paid_total %}<tr><td colspan="2" class="text-end">Paid</td><td class="text-end money text-success">{{ order.paid_total|money }}</td></tr>
+          <tr class="fw-bold"><td colspan="2" class="text-end">Balance</td><td class="text-end money">{{ balance|money }}</td></tr>{% endif %}
+        </tfoot>
+      </table></div>
+    </div>
+
+    {% if order.is_open and items %}
+    <div class="card mb-3"><div class="card-header">Settle</div><div class="card-body">
+      {% if order.booking %}
+      <form method="post" action="{% url 'pos:order_charge_room' order.pk %}" class="mb-3" onsubmit="return confirm('Charge KES {{ order.total|money }} to room {{ order.booking.room.number }}?')">{% csrf_token %}
+        <button class="btn btn-info w-100"><i class="bi bi-door-closed"></i> Charge to room {{ order.booking.room.number }} ({{ order.booking.guest }})</button>
+      </form>
+      {% endif %}
+      <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pay-mpesa" type="button"><i class="bi bi-phone text-success"></i> M-Pesa prompt</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pay-other" type="button">Cash / card / code</button></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="pay-mpesa">
+          <form method="post" action="{% url 'mpesa:stk_start' %}" data-once>{% csrf_token %}
+            <input type="hidden" name="order" value="{{ order.pk }}">
+            <div class="row g-2">{% include "partials/field.html" with field=mpesa_form.phone col="col-7" %}{% include "partials/field.html" with field=mpesa_form.amount col="col-5" %}</div>
+            <button class="btn btn-success w-100 mt-2" data-loading="Sending…"><i class="bi bi-send"></i> Send M-Pesa prompt</button>
+          </form>
+        </div>
+        <div class="tab-pane fade" id="pay-other">
+          <form method="post" action="{% url 'pos:order_pay' order.pk %}" data-once>{% csrf_token %}
+            <div class="row g-2">{% include "partials/field.html" with field=payment_form.method col="col-6" %}{% include "partials/field.html" with field=payment_form.amount col="col-6" %}
+              {% include "partials/field.html" with field=payment_form.reference col="col-12" %}</div>
+            <button class="btn btn-primary w-100 mt-2">Record payment</button>
+          </form>
+        </div>
+      </div>
+    </div></div>
+    {% endif %}
+
+    {% if payments %}
+    <div class="card mb-3"><div class="card-header">Payments</div><ul class="list-group list-group-flush">
+      {% for p in payments %}<li class="list-group-item d-flex justify-content-between align-items-center small {% if p.is_void %}void-row{% endif %}">
+        <span><a href="{% url 'bookings:receipt' p.pk %}" target="_blank">{{ p.receipt_number }}</a> · {{ p.get_method_display }} {{ p.reference }}</span>
+        <span class="money">{{ p.amount|money }} {% if can_void and not p.is_void %}<form class="d-inline" method="post" action="{% url 'bookings:payment_void' p.pk %}" onsubmit="const r = prompt('Reason for voiding?'); if (!r) return false; this.reason.value = r;">{% csrf_token %}<input type="hidden" name="reason"><button class="btn btn-link btn-sm text-danger p-0 ms-2">Void</button></form>{% endif %}</span>
+      </li>{% endfor %}
+    </ul></div>
+    {% endif %}
+
+    {% if order.is_open %}
+    <div class="card"><div class="card-header">Order details</div><div class="card-body">
+      <form method="post">{% csrf_token %}
+        <div class="row g-2">
+          {% include "partials/field.html" with field=form.outlet col="col-6" %}{% include "partials/field.html" with field=form.table_number col="col-6" %}
+          {% include "partials/field.html" with field=form.booking col="col-12" %}{% include "partials/field.html" with field=form.customer_name col="col-6" %}
+          {% include "partials/field.html" with field=form.discount col="col-6" %}{% include "partials/field.html" with field=form.notes col="col-12" %}
+        </div>
+        <button class="btn btn-outline-primary btn-sm mt-2">Update details</button>
+      </form>
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

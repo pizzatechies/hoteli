@@ -1,0 +1,27 @@
+<form method="get" action="{% url 'website:search' %}" class="search-card">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-3"><label class="form-label" for="{{ search_form.check_in.id_for_label }}">Check-in</label>{{ search_form.check_in }}</div>
+    <div class="col-6 col-md-3"><label class="form-label" for="{{ search_form.check_out.id_for_label }}">Check-out</label>{{ search_form.check_out }}</div>
+    <div class="col-6 col-md-2"><label class="form-label" for="{{ search_form.adults.id_for_label }}">Adults</label>{{ search_form.adults }}</div>
+    <div class="col-6 col-md-2"><label class="form-label" for="{{ search_form.children.id_for_label }}">Children</label>{{ search_form.children }}</div>
+    <div class="col-12 col-md-2"><button class="btn btn-brand w-100 py-2"><i class="bi bi-search"></i> Check</button></div>
+  </div>
+  {% if search_form.errors %}<div class="text-danger small mt-2">{% for field in search_form %}{% for e in field.errors %}<div>{{ e }}</div>{% endfor %}{% endfor %}{% for e in search_form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
+</form>
+<script>
+(function () {
+  const ci = document.getElementById("{{ search_form.check_in.id_for_label }}");
+  const co = document.getElementById("{{ search_form.check_out.id_for_label }}");
+  if (!ci || !co) return;
+  const today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  ci.min = today.toISOString().slice(0, 10);
+  function sync() {
+    if (!ci.value) return;
+    const next = new Date(ci.value); next.setDate(next.getDate() + 1);
+    const min = next.toISOString().slice(0, 10);
+    co.min = min;
+    if (!co.value || co.value < min) co.value = min;
+  }
+  ci.addEventListener("change", sync); sync();
+})();
+</script>

@@ -1,0 +1,111 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dashboard{% endblock %} · {{ hotel.name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{% static 'css/staff.css' %}" rel="stylesheet">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="staff">
+<div class="staff-shell">
+  <aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar">
+    <div class="sidebar-brand">
+      <a href="{% url 'core:dashboard' %}" class="text-decoration-none text-white d-flex align-items-center gap-2">
+        <span class="brand-mark"><i class="bi bi-building"></i></span>
+        <span class="fw-semibold text-truncate">{{ hotel.name }}</span>
+      </a>
+      <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close"></button>
+    </div>
+    {% with path=request.path %}
+    <nav class="sidebar-nav">
+      {% if nav.bookings or nav.finance %}
+      <a href="{% url 'core:dashboard' %}" class="{% if path == '/staff/' %}active{% endif %}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      {% endif %}
+      {% if nav.bookings %}
+      <div class="nav-section">Front office</div>
+      <a href="{% url 'bookings:front_desk' %}" class="{% if '/frontdesk/' in path %}active{% endif %}"><i class="bi bi-person-badge"></i> Front desk</a>
+      <a href="{% url 'bookings:tape_chart' %}" class="{% if '/calendar/' in path %}active{% endif %}"><i class="bi bi-calendar3"></i> Room calendar</a>
+      <a href="{% url 'bookings:list' %}" class="{% if '/bookings/' in path %}active{% endif %}"><i class="bi bi-journal-bookmark"></i> Bookings</a>
+      <a href="{% url 'bookings:guest_list' %}" class="{% if '/guests/' in path %}active{% endif %}"><i class="bi bi-people"></i> Guests</a>
+      {% endif %}
+      {% if nav.bookings or nav.housekeeping %}
+      <a href="{% url 'rooms:list' %}" class="{% if path == '/staff/rooms/' %}active{% endif %}"><i class="bi bi-door-open"></i> Rooms</a>
+      {% endif %}
+      {% if nav.housekeeping %}
+      <div class="nav-section">Operations</div>
+      <a href="{% url 'housekeeping:board' %}" class="{% if path == '/staff/housekeeping/' or '/housekeeping/tasks' in path %}active{% endif %}"><i class="bi bi-stars"></i> Housekeeping</a>
+      <a href="{% url 'housekeeping:maintenance' %}" class="{% if '/maintenance' in path %}active{% endif %}"><i class="bi bi-tools"></i> Maintenance</a>
+      {% endif %}
+      {% if nav.pos %}
+      {% if not nav.housekeeping %}<div class="nav-section">Operations</div>{% endif %}
+      <a href="{% url 'pos:home' %}" class="{% if '/pos/' in path and '/menu' not in path %}active{% endif %}"><i class="bi bi-cup-hot"></i> Restaurant &amp; bar</a>
+      <a href="{% url 'pos:menu' %}" class="{% if '/pos/menu' in path %}active{% endif %}"><i class="bi bi-list-ul"></i> Menu</a>
+      {% endif %}
+      {% if nav.finance or nav.front_desk %}
+      <div class="nav-section">Money</div>
+      {% if nav.finance %}<a href="{% url 'bookings:payment_list' %}" class="{% if path == '/staff/payments/' %}active{% endif %}"><i class="bi bi-cash-coin"></i> Payments</a>{% endif %}
+      <a href="{% url 'mpesa:list' %}" class="{% if '/mpesa/' in path %}active{% endif %}"><i class="bi bi-phone"></i> M-Pesa</a>
+      {% endif %}
+      {% if nav.reports %}
+      <a href="{% url 'core:reports' %}" class="{% if '/reports/' in path %}active{% endif %}"><i class="bi bi-graph-up"></i> Reports</a>
+      {% endif %}
+      {% if nav.front_desk %}
+      <div class="nav-section">Website</div>
+      <a href="{% url 'website:inbox' %}" class="{% if '/inbox/' in path %}active{% endif %}"><i class="bi bi-envelope"></i> Inbox {% if unread_messages %}<span class="badge rounded-pill text-bg-danger ms-auto">{{ unread_messages }}</span>{% endif %}</a>
+      {% if nav.management %}<a href="{% url 'website:manage' %}" class="{% if '/staff/website/' in path %}active{% endif %}"><i class="bi bi-globe2"></i> Website content</a>{% endif %}
+      {% endif %}
+      {% if nav.management %}
+      <div class="nav-section">Setup</div>
+      <a href="{% url 'rooms:types' %}" class="{% if '/rooms/types' in path or '/rooms/rates' in path %}active{% endif %}"><i class="bi bi-tags"></i> Room types &amp; rates</a>
+      <a href="{% url 'core:audit_log' %}" class="{% if '/audit-log/' in path %}active{% endif %}"><i class="bi bi-clock-history"></i> Audit log</a>
+      {% endif %}
+      {% if nav.admin %}
+      <a href="{% url 'accounts:users' %}" class="{% if '/users/' in path %}active{% endif %}"><i class="bi bi-person-gear"></i> Staff</a>
+      <a href="{% url 'core:settings' %}" class="{% if '/settings/' in path %}active{% endif %}"><i class="bi bi-gear"></i> Settings</a>
+      {% endif %}
+    </nav>
+    {% endwith %}
+  </aside>
+
+  <div class="staff-main">
+    <header class="topbar">
+      <button class="btn btn-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Menu"><i class="bi bi-list"></i></button>
+      <div class="topbar-title text-truncate">{% block page_title %}{% endblock %}</div>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="badge rounded-pill {% if mpesa_simulated %}text-bg-warning{% elif mpesa_mode == 'Live' %}text-bg-success{% else %}text-bg-info{% endif %}" title="M-Pesa mode">
+          <i class="bi bi-phone"></i> M-Pesa: {{ mpesa_mode }}
+        </span>
+        <a href="/" class="btn btn-sm btn-outline-secondary d-none d-md-inline-block" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Website</a>
+        <div class="dropdown">
+          <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle"></i> <span class="d-none d-sm-inline">{{ request.user }}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><span class="dropdown-item-text small text-body-secondary">{{ request.user.get_role_display_name }}</span></li>
+            <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}"><i class="bi bi-key"></i> Change password</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+                <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Log out</button>
+              </form>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </header>
+    <main class="staff-content">
+      {% include "partials/messages.html" %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'js/mpesa.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

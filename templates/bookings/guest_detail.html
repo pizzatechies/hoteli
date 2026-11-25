@@ -1,0 +1,36 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}{{ guest }}{% endblock %}
+{% block page_title %}Guest profile{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <h1>{{ guest }} {% if guest.is_vip %}<span class="badge text-bg-warning">VIP</span>{% endif %}{% if guest.is_blacklisted %}<span class="badge text-bg-danger">Blacklisted</span>{% endif %}</h1>
+  {% if nav.front_desk %}<div class="d-flex gap-2"><a href="{% url 'bookings:create' %}?guest={{ guest.pk }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New booking</a><a href="{% url 'bookings:guest_edit' guest.pk %}" class="btn btn-outline-secondary">Edit</a></div>{% endif %}
+</div>
+{% if guest.is_blacklisted %}<div class="alert alert-danger">Blacklisted: {{ guest.blacklist_reason }}</div>{% endif %}
+<div class="row g-3">
+  <div class="col-lg-4"><div class="card"><div class="card-body small">
+    <dl class="row mb-0">
+      <dt class="col-5">Phone</dt><dd class="col-7">{{ guest.phone }}</dd>
+      <dt class="col-5">Email</dt><dd class="col-7">{{ guest.email|default:"—" }}</dd>
+      <dt class="col-5">{{ guest.get_id_type_display }}</dt><dd class="col-7">{{ guest.id_number|default:"—" }}</dd>
+      <dt class="col-5">Nationality</dt><dd class="col-7">{{ guest.nationality }}</dd>
+      <dt class="col-5">Date of birth</dt><dd class="col-7">{{ guest.date_of_birth|date:"d M Y"|default:"—" }}</dd>
+      <dt class="col-5">Company</dt><dd class="col-7">{{ guest.company|default:"—" }}</dd>
+      <dt class="col-5">Address</dt><dd class="col-7">{{ guest.address|default:"—" }}</dd>
+      <dt class="col-5">Vehicle</dt><dd class="col-7">{{ guest.vehicle_registration|default:"—" }}</dd>
+    </dl>
+    {% if guest.notes %}<hr><div>{{ guest.notes|linebreaksbr }}</div>{% endif %}
+  </div></div>
+  <div class="card mt-3"><div class="card-body d-flex justify-content-around text-center">
+    <div><div class="fs-4 fw-bold">{{ stay_count }}</div><div class="small text-body-secondary">stays</div></div>
+    <div><div class="fs-4 fw-bold">{{ nights }}</div><div class="small text-body-secondary">nights</div></div>
+    <div><div class="fs-4 fw-bold money">{{ lifetime_value|money:0 }}</div><div class="small text-body-secondary">KES spent</div></div>
+  </div></div></div>
+  <div class="col-lg-8"><div class="card"><div class="card-header">Booking history</div><div class="table-responsive"><table class="table table-hover mb-0">
+    <thead><tr><th>Ref</th><th>Dates</th><th>Room</th><th>Status</th><th class="text-end">Charges</th><th class="text-end">Balance</th></tr></thead>
+    <tbody>{% for b in bookings %}<tr><td><a href="{% url 'bookings:detail' b.pk %}">{{ b.reference }}</a></td><td class="small">{{ b.check_in_date|date:"d M Y" }} → {{ b.check_out_date|date:"d M Y" }}</td><td>{{ b.room.number }}</td><td>{% status_badge b %}</td><td class="text-end money">{{ b.charges_total|money }}</td><td class="text-end money {% if b.balance > 0 %}text-danger{% endif %}">{{ b.balance|money }}</td></tr>
+    {% empty %}<tr><td colspan="6" class="text-body-secondary">No bookings yet.</td></tr>{% endfor %}</tbody>
+  </table></div></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}M-Pesa transaction{% endblock %}
+{% block page_title %}M-Pesa STK transaction{% endblock %}
+{% block content %}
+<div class="page-actions"><h1>KES {{ tx.amount|money:0 }} · {{ tx.phone }} {% status_badge tx %}</h1>
+  {% if tx.status == "PENDING" and not tx.is_simulated %}<form method="post">{% csrf_token %}<button class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> Check status with Safaricom</button></form>{% endif %}
+</div>
+{% if tx.status == "PENDING" %}{% include "partials/mpesa_status.html" with tx_id=tx.uuid %}{% endif %}
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card"><div class="card-body small"><dl class="row mb-0">
+    <dt class="col-5">For</dt><dd class="col-7">{% if tx.booking %}<a href="{% url 'bookings:detail' tx.booking_id %}">{{ tx.booking.reference }}</a>{% elif tx.order %}<a href="{% url 'pos:order' tx.order_id %}">{{ tx.order.number }}</a>{% endif %}</dd>
+    <dt class="col-5">Account ref</dt><dd class="col-7">{{ tx.account_reference }}</dd>
+    <dt class="col-5">Receipt</dt><dd class="col-7 fw-semibold">{{ tx.mpesa_receipt|default:"—" }}</dd>
+    <dt class="col-5">Result</dt><dd class="col-7">{{ tx.result_code|default:"—" }} · {{ tx.result_desc }}</dd>
+    <dt class="col-5">Paid from</dt><dd class="col-7">{{ tx.paid_phone|default:"—" }}</dd>
+    <dt class="col-5">M-Pesa time</dt><dd class="col-7">{{ tx.transaction_date|date:"d M Y H:i:s"|default:"—" }}</dd>
+    <dt class="col-5">Checkout ID</dt><dd class="col-7 text-break">{{ tx.checkout_request_id }}</dd>
+    <dt class="col-5">Merchant ID</dt><dd class="col-7 text-break">{{ tx.merchant_request_id }}</dd>
+    <dt class="col-5">Payment</dt><dd class="col-7">{% if tx.payment %}<a href="{% url 'bookings:receipt' tx.payment_id %}" target="_blank">{{ tx.payment.receipt_number }}</a>{% else %}—{% endif %}</dd>
+    <dt class="col-5">Status checks</dt><dd class="col-7">{{ tx.query_attempts }}{% if tx.last_queried_at %} (last {{ tx.last_queried_at|date:"H:i:s" }}){% endif %}</dd>
+    <dt class="col-5">Started</dt><dd class="col-7">{{ tx.created_at|date:"d M Y H:i:s" }} by {{ tx.initiated_by|default:"guest (website)" }}</dd>
+    <dt class="col-5">Mode</dt><dd class="col-7">{% if tx.is_simulated %}Simulation{% else %}Daraja{% endif %}</dd>
+  </dl></div></div></div>
+  <div class="col-lg-7">
+    <div class="card mb-3"><div class="card-header">Daraja response</div><div class="card-body"><pre class="payload mb-0">{{ raw_response|default:"—" }}</pre></div></div>
+    <div class="card"><div class="card-header">Callback payload</div><div class="card-body"><pre class="payload mb-0">{{ raw_callback|default:"No callback received yet." }}</pre></div></div>
+  </div>
+</div>
+{% endblock %}

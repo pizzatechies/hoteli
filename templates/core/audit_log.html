@@ -1,0 +1,26 @@
+{% extends "base_staff.html" %}
+{% block title %}Audit log{% endblock %}
+{% block page_title %}Audit log{% endblock %}
+{% block content %}
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-5"><input name="q" value="{{ q }}" class="form-control" placeholder="Search description…"></div>
+  <div class="col-md-3"><select name="action" class="form-select">
+    <option value="">All actions</option>
+    <option value="booking" {% if action == 'booking' %}selected{% endif %}>Bookings</option>
+    <option value="payment" {% if action == 'payment' %}selected{% endif %}>Payments</option>
+    <option value="charge" {% if action == 'charge' %}selected{% endif %}>Charges</option>
+    <option value="mpesa" {% if action == 'mpesa' %}selected{% endif %}>M-Pesa</option>
+    <option value="night_audit" {% if action == 'night_audit' %}selected{% endif %}>Night audit</option>
+    <option value="pos" {% if action == 'pos' %}selected{% endif %}>POS</option>
+    <option value="user" {% if action == 'user' %}selected{% endif %}>Staff</option>
+  </select></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-sm table-hover mb-0">
+  <thead><tr><th>When</th><th>User</th><th>Action</th><th>Description</th></tr></thead>
+  <tbody>{% for log in page %}
+    <tr><td class="small text-nowrap">{{ log.created_at|date:"d M Y H:i:s" }}</td><td>{{ log.user|default:"System / guest" }}</td><td><code>{{ log.action }}</code></td><td>{{ log.description }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="text-body-secondary">Nothing logged yet.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

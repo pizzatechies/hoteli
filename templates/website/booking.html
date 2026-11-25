@@ -1,0 +1,95 @@
+{% extends "base_site.html" %}
+{% load hotel %}
+{% block title %}Booking {{ booking.reference }}{% endblock %}
+{% block content %}
+<section class="section pt-4"><div class="container">
+  {% if booking.status == "PENDING" %}
+  <div class="steps mb-4"><span class="step"><span class="num">1</span> Choose room</span><span class="step"><span class="num">2</span> Your details</span><span class="step active"><span class="num">3</span> Pay with M-Pesa</span></div>
+  {% endif %}
+  <div class="row g-4">
+    <div class="col-lg-7">
+      {% if booking.status == "PENDING" %}
+        <h1 class="h3">Almost done, {{ booking.guest.first_name }}!</h1>
+        <p class="text-body-secondary">Pay your deposit of <strong>KES {{ pay_amount|money:0 }}</strong> with M-Pesa to confirm booking <strong>{{ booking.reference }}</strong>.
+          {% if booking.expires_at %}We're holding your room until <strong>{{ booking.expires_at|time:"H:i" }}</strong> (<span id="countdown"></span>).{% endif %}</p>
+      {% elif booking.status == "CONFIRMED" %}
+        <div class="alert alert-success d-flex gap-3 align-items-center"><i class="bi bi-check-circle-fill fs-3"></i><div><div class="fw-semibold">Your booking is confirmed!</div><div class="small">Reference <strong>{{ booking.reference }}</strong>{% if booking.guest.email %} · confirmation sent to {{ booking.guest.email }}{% endif %}</div></div></div>
+      {% elif booking.status == "CHECKED_IN" %}
+        <div class="alert alert-info">Welcome! You're checked in to room {{ booking.room.number }}.</div>
+      {% elif booking.status == "CHECKED_OUT" %}
+        <div class="alert alert-secondary">Thank you for staying with us. We hope to see you again soon!</div>
+      {% elif booking.status == "CANCELLED" %}
+        <div class="alert alert-danger">This booking has been cancelled{% if booking.cancellation_reason %}: {{ booking.cancellation_reason }}{% endif %}.
+          {% if paid > 0 %}<br>You have paid KES {{ paid|money:0 }}. Please contact us about a refund or rebooking.{% else %}<a href="{% url 'website:search' %}" class="alert-link">Make a new booking</a>.{% endif %}</div>
+      {% else %}
+        <div class="alert alert-secondary">Booking status: {{ booking.get_status_display }}.</div>
+      {% endif %}
+
+      {% if request.GET.tx %}{% include "partials/mpesa_status.html" with tx_id=request.GET.tx %}
+      {% elif pending_tx %}{% include "partials/mpesa_status.html" with tx_id=pending_tx.uuid %}{% endif %}
+
+      {% if can_pay %}
+      <div class="card border-0 shadow-sm rounded-4 mb-4 {% if request.GET.tx or pending_tx %}d-none{% endif %}" data-mpesa-retry><div class="card-body p-4">
+        <h2 class="h5 mb-1"><span class="mpesa-brand">M-PESA</span> {% if booking.status == "PENDING" %}deposit{% else %}– pay your balance now (optional){% endif %}</h2>
+        <p class="small text-body-secondary">Enter your Safaricom number. You'll get a prompt on your phone – enter your M-Pesa PIN to pay.</p>
+        <form method="post" action="{% url 'website:booking_pay' booking.public_token %}" data-once>{% csrf_token %}
+          <div class="row g-2 align-items-end">
+            <div class="col-sm-6"><label class="form-label" for="id_phone">M-Pesa number</label>{{ pay_form.phone }}</div>
+            <div class="col-sm-3"><label class="form-label" for="id_amount">Amount (KES)</label>
+              <input type="number" name="amount" id="id_amount" class="form-control" value="{{ pay_amount }}" min="1" max="{{ pay_amount }}" {% if booking.status == "PENDING" %}readonly{% endif %}></div>
+            <div class="col-sm-3"><button class="btn btn-success w-100" data-loading="Sending…"><i class="bi bi-phone"></i> Pay now</button></div>
+          </div>
+        </form>
+        <div class="small text-body-secondary mt-2">Didn't get a prompt? Check that the number is correct and your phone is on, then try again.</div>
+        {% if paybill %}
+        <hr>
+        <div class="small text-body-secondary"><strong>Prefer to pay manually?</strong> M-Pesa → Lipa na M-Pesa → Paybill → Business no. <strong>{{ paybill_number }}</strong> → Account no. <strong>{{ booking.reference }}</strong>. Your payment will reflect automatically.</div>
+        {% endif %}
+        {% if mpesa_simulated %}<div class="small text-warning-emphasis mt-2"><i class="bi bi-cone-striped"></i> Demo mode: M-Pesa is simulated, no real money will be charged.</div>{% endif %}
+      </div></div>
+      {% endif %}
+
+      {% if successful_payments %}
+      <h2 class="h6">Payments received</h2>
+      <ul class="list-group mb-4">{% for p in successful_payments %}<li class="list-group-item d-flex justify-content-between small"><span>{{ p.created_at|date:"d M Y H:i" }} · {{ p.get_method_display }} {{ p.reference }}</span><strong>KES {{ p.amount|money:0 }}</strong></li>{% endfor %}</ul>
+      {% endif %}
+
+      <div class="small text-body-secondary">
+        <p class="mb-1"><i class="bi bi-info-circle"></i> Check-in from {{ hotel.check_in_time|time:"H:i" }}; check-out by {{ hotel.check_out_time|time:"H:i" }}. Please carry your ID or passport.</p>
+        <p class="mb-0">Need to change something? <a href="{% url 'website:contact' %}">Contact us</a> quoting {{ booking.reference }}. Bookmark this page to come back to it.</p>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card summary-card"><div class="card-body p-4">
+        <div class="d-flex justify-content-between"><h2 class="h5 mb-0">{{ booking.room.room_type.name }}</h2>{% status_badge booking %}</div>
+        <div class="small text-body-secondary mb-3">Ref {{ booking.reference }}</div>
+        <ul class="list-unstyled small mb-3">
+          <li><i class="bi bi-person"></i> {{ booking.guest }}</li>
+          <li><i class="bi bi-calendar-event"></i> {{ booking.check_in_date|date:"D j M Y" }} → {{ booking.check_out_date|date:"D j M Y" }}</li>
+          <li><i class="bi bi-moon"></i> {{ booking.nights }} night{{ booking.nights|pluralize }}</li>
+          <li><i class="bi bi-people"></i> {{ booking.adults }} adult{{ booking.adults|pluralize }}{% if booking.children %}, {{ booking.children }} child{{ booking.children|pluralize:"ren" }}{% endif %}</li>
+        </ul>
+        <div class="d-flex justify-content-between border-top pt-3"><span>Stay total</span><strong>KES {{ projected_total|money:0 }}</strong></div>
+        <div class="d-flex justify-content-between text-success"><span>Paid</span><strong>KES {{ paid|money:0 }}</strong></div>
+        <div class="d-flex justify-content-between fs-5 mt-1"><span>Balance</span><strong>KES {{ amount_due|money:0 }}</strong></div>
+      </div></div>
+    </div>
+  </div>
+</div></section>
+{% endblock %}
+{% block scripts %}
+{% if booking.status == "PENDING" and booking.expires_at %}
+<script>
+(function () {
+  const el = document.getElementById("countdown");
+  const end = new Date("{{ booking.expires_at|date:'c' }}").getTime();
+  function tick() {
+    const s = Math.max(0, Math.floor((end - Date.now()) / 1000));
+    el.textContent = s > 0 ? Math.floor(s / 60) + "m " + String(s % 60).padStart(2, "0") + "s left" : "time is up – refresh";
+    if (s > 0) setTimeout(tick, 1000);
+  }
+  tick();
+})();
+</script>
+{% endif %}
+{% endblock %}

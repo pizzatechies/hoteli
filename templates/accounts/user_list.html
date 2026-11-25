@@ -1,0 +1,24 @@
+{% extends "base_staff.html" %}
+{% block title %}Staff{% endblock %}
+{% block page_title %}Staff accounts{% endblock %}
+{% block content %}
+<div class="page-actions"><h1>Staff</h1><a href="{% url 'accounts:user_create' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Add staff</a></div>
+<div class="card"><div class="table-responsive">
+<table class="table table-hover align-middle table-card">
+  <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Phone</th><th>Last login</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td>{{ u.get_full_name|default:"—" }}</td><td>{{ u.username }}</td><td>{{ u.get_role_display_name }}</td>
+      <td>{{ u.phone|default:"—" }}</td><td>{{ u.last_login|date:"d M Y H:i"|default:"Never" }}</td>
+      <td>{% if u.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Disabled</span>{% endif %}</td>
+      <td class="text-end"><a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+<div class="card mt-3"><div class="card-body small text-body-secondary">
+  <strong>Roles:</strong> Administrator (everything) · Manager (all operations, reports, setup) · Front Desk (bookings, check-in/out, payments, M-Pesa) ·
+  Accountant (payments, refunds, voids, reports) · Housekeeping (room status, tasks, maintenance) · Restaurant / Bar (POS).
+</div></div>
+{% endblock %}

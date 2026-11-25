@@ -1,0 +1,31 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}M-Pesa{% endblock %}
+{% block page_title %}M-Pesa{% endblock %}
+{% block content %}
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link active" href="{% url 'mpesa:list' %}">STK push</a></li>
+  <li class="nav-item"><a class="nav-link" href="{% url 'mpesa:c2b_list' %}">Paybill (C2B) {% if unmatched %}<span class="badge text-bg-danger">{{ unmatched }}</span>{% endif %}</a></li>
+  {% if nav.finance %}<li class="nav-item"><a class="nav-link" href="{% url 'mpesa:callback_logs' %}">Callback log</a></li>{% endif %}
+</ul>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-5"><input name="q" value="{{ q }}" class="form-control" placeholder="Phone, receipt or account reference"></div>
+  <div class="col-md-3"><select name="status" class="form-select"><option value="">All statuses</option>{% for v, l in statuses %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>Time</th><th>For</th><th>Phone</th><th class="text-end">Amount</th><th>Status</th><th>Receipt</th><th>Source</th><th>Message</th></tr></thead>
+  <tbody>{% for tx in page %}
+  <tr>
+    <td class="small text-nowrap"><a href="{% url 'mpesa:detail' tx.pk %}">{{ tx.created_at|date:"d M H:i:s" }}</a></td>
+    <td>{% if tx.booking %}<a href="{% url 'bookings:detail' tx.booking_id %}">{{ tx.booking.reference }}</a><div class="small text-body-secondary">{{ tx.booking.guest }}</div>{% elif tx.order %}<a href="{% url 'pos:order' tx.order_id %}">{{ tx.order.number }}</a>{% endif %}</td>
+    <td class="small">{{ tx.phone }}</td><td class="text-end money">{{ tx.amount|money:0 }}</td>
+    <td>{% status_badge tx %}{% if tx.is_simulated %} <span class="badge text-bg-light">sim</span>{% endif %}</td>
+    <td class="fw-semibold">{{ tx.mpesa_receipt|default:"—" }}</td>
+    <td class="small">{{ tx.get_source_display }}{% if tx.initiated_by %} · {{ tx.initiated_by }}{% endif %}</td>
+    <td class="small text-body-secondary">{{ tx.result_desc|truncatechars:60 }}</td>
+  </tr>
+  {% empty %}<tr><td colspan="8" class="text-body-secondary">No STK push transactions yet. Send one from a booking or POS order.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

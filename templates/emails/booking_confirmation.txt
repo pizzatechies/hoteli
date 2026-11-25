@@ -1,0 +1,20 @@
+{% load hotel %}Dear {{ booking.guest.first_name }},
+
+Thank you for choosing {{ hotel.name }}. Your booking is confirmed.
+
+Booking reference: {{ booking.reference }}
+Room: {{ booking.room.room_type.name }}
+Check-in:  {{ booking.check_in_date|date:"l, j F Y" }} from {{ hotel.check_in_time|time:"H:i" }}
+Check-out: {{ booking.check_out_date|date:"l, j F Y" }} by {{ hotel.check_out_time|time:"H:i" }}
+Guests: {{ booking.adults }} adult(s){% if booking.children %}, {{ booking.children }} child(ren){% endif %}
+Nights: {{ booking.nights }}
+
+Estimated total: KES {{ booking.projected_total|money }}
+Paid so far:     KES {{ booking.payments_total|money }}
+
+View or pay your booking online: {{ site_url }}{% url 'website:booking' booking.public_token %}
+
+Please bring your national ID or passport for registration at check-in.
+
+{{ hotel.name }}
+{{ hotel.address }} | {{ hotel.phone }} | {{ hotel.email }}

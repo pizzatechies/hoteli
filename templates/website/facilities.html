@@ -1,0 +1,11 @@
+{% extends "base_site.html" %}
+{% block title %}Facilities{% endblock %}
+{% block content %}
+<section class="page-header"><div class="container"><div class="eyebrow">Everything you need</div><h1>Facilities &amp; services</h1></div></section>
+<section class="section pt-5"><div class="container"><div class="row g-4">
+  {% for f in facilities %}<div class="col-sm-6 col-lg-3"><div class="facility"><i class="bi bi-{{ f.icon }}"></i><h2 class="h6 mt-2" style="font-family:inherit">{{ f.name }}</h2><p class="small text-body-secondary mb-0">{{ f.description }}</p></div></div>
+  {% empty %}<p class="text-body-secondary">Details coming soon.</p>{% endfor %}
+</div>
+<div class="text-center mt-5"><a href="{% url 'website:search' %}" class="btn btn-brand btn-lg">Check availability</a></div>
+</div></section>
+{% endblock %}
