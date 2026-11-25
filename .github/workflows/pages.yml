@@ -13,6 +13,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: pages
@@ -54,5 +55,21 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}demo/
     steps:
+      # While Settings > Pages > Source is still "Deploy from a branch", GitHub also publishes the
+      # README for every push. Wait for that build so this demo is deployed last and stays live.
+      # (No-op once the source is set to "GitHub Actions".)
+      - name: Wait for the branch-based Pages build
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5
+          for i in $(seq 1 36); do
+            pending=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=${{ github.sha }}&per_page=50" \
+              --jq '[.workflow_runs[] | select(.name == "pages build and deployment" and .status != "completed")] | length')
+            if [ "$pending" = "0" ]; then echo "No branch-based Pages build running."; break; fi
+            echo "Branch-based Pages build still running ($i), waiting..."
+            sleep 10
+          done
       - id: deployment
         uses: actions/deploy-pages@v4
