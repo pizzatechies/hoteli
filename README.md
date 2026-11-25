@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="static/brand/hoteli-logo-tagline-light.svg">
+    <img src="static/brand/hoteli-logo-tagline.svg" alt="Hoteli – hotel management system" height="72">
+  </picture>
+</p>
+
 # Hoteli – Hotel Management System with M-Pesa
 
 A complete hotel management system for Kenyan hotels, built with Django. It covers the staff back office (front desk, billing, housekeeping, restaurant POS, reports) and a public hotel website where guests book and pay a deposit with an **M-Pesa STK push** (Lipa Na M-Pesa Online).
@@ -222,6 +229,10 @@ In production, always set `DEBUG=False`, a long `SECRET_KEY`, `ALLOWED_HOSTS` an
 | Accountant | Bookings (read), payments, refunds, voids, M-Pesa reconciliation, reports |
 | Housekeeping | Housekeeping board, tasks, room status, maintenance |
 | Restaurant / Bar | POS orders, payments, charge to room |
+
+## Brand
+
+The official Hoteli logos live in [`static/brand/`](static/brand/), with usage rules in [`branding/README.md`](branding/README.md). There are colour, light (for dark backgrounds), single-colour, stacked and tagline versions, plus favicons, app icons and a GitHub social-preview image. Each hotel's own logo (uploaded under *Hotel name & logos*) is what guests see. The Hoteli logo appears in the staff area, the login screen and the demo.
 
 ## Development
 
