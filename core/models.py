@@ -19,6 +19,10 @@ class HotelSettings(models.Model):
     phone = models.CharField(max_length=40, blank=True, default="+254 700 000 000")
     email = models.EmailField(blank=True, default="reservations@hoteli.local")
     website = models.URLField(blank=True)
+    legal_name = models.CharField(
+        "Registered business name", max_length=150, blank=True,
+        help_text="Shown on invoices and receipts if it differs from the hotel name, e.g. Grand Hospitality Ltd.",
+    )
     kra_pin = models.CharField("KRA PIN", max_length=20, blank=True)
     currency = models.CharField(max_length=5, default="KES")
 

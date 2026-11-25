@@ -47,7 +47,9 @@ A complete hotel management system for Kenyan hotels, built with Django. It cove
 - "Manage my booking" look-up (reference plus phone or email), where guests can view the booking and pay the balance
 - WhatsApp button, mobile friendly
 
-**Logos & branding** (Staff → Logos & branding, for managers)
+**Hotel name & logos** (Staff → Hotel name & logos, for managers)
+- Rename the hotel and change its tagline. The new name appears straight away on the website, browser tabs, staff area, login screen, confirmation emails (subject and sender name), invoices, receipts and POS bills. Every rename is recorded in the audit log.
+- Optional registered business name (e.g. *Naivasha Hospitality Ltd*) printed on invoices and receipts
 - Upload a main logo, a light logo for dark backgrounds, and a favicon (PNG, JPG, WebP, GIF, SVG or ICO)
 - The logos appear in the website header and footer, the staff sidebar, the login screen, invoices, receipts and POS bills
 - Option to hide the hotel name next to the logo when the logo already includes it

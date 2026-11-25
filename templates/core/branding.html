@@ -1,12 +1,25 @@
 {% extends "base_staff.html" %}
-{% block title %}Logos & branding{% endblock %}
-{% block page_title %}Logos &amp; branding{% endblock %}
+{% block title %}Name & logos{% endblock %}
+{% block page_title %}Hotel name &amp; logos{% endblock %}
 {% block content %}
 <div class="page-actions">
-  <h1>Logos &amp; branding</h1>
+  <h1>Hotel name &amp; logos</h1>
   <div class="d-flex gap-2"><a href="{% url 'website:builder' %}" class="btn btn-outline-secondary"><i class="bi bi-palette"></i> Theme colours &amp; fonts</a>
     <a href="/" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up-right"></i> View website</a></div>
 </div>
+<div class="card mb-3" id="name"><div class="card-header">Hotel name</div><div class="card-body">
+  <form method="post">{% csrf_token %}
+    <input type="hidden" name="action" value="identity">
+    {% if identity_form.non_field_errors %}<div class="alert alert-danger">{% for e in identity_form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+    <div class="row g-3">
+      {% include "partials/field.html" with field=identity_form.name col="col-lg-4" %}
+      {% include "partials/field.html" with field=identity_form.tagline col="col-lg-4" %}
+      {% include "partials/field.html" with field=identity_form.legal_name col="col-lg-4" %}
+      {% include "partials/field.html" with field=identity_form.logo_show_name col="col-12" %}
+    </div>
+    <button class="btn btn-primary mt-3"><i class="bi bi-check2"></i> Save name</button>
+  </form>
+</div></div>
 <div class="row g-3">
   {% for slot in slots %}
   <div class="col-lg-4">
@@ -35,14 +48,6 @@
   </div>
   {% endfor %}
 </div>
-<div class="card mt-3"><div class="card-body">
-  <form method="post" class="d-flex flex-wrap align-items-center gap-3">{% csrf_token %}
-    <input type="hidden" name="action" value="toggle_name">
-    <div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="logo_show_name" id="show_name" value="1" {% if hotel_obj.logo_show_name %}checked{% endif %}>
-      <label class="form-check-label" for="show_name">Show the hotel name (“{{ hotel_obj.name }}”) next to the logo</label></div>
-    <button class="btn btn-sm btn-outline-primary">Save</button>
-    <span class="small text-body-secondary">Turn this off if your logo already includes the name. Change the name itself under {% if nav.admin %}<a href="{% url 'core:settings' %}">Settings</a>{% else %}Settings{% endif %}.</span>
-  </form>
-</div></div>
+
 <p class="small text-body-secondary mt-3 mb-0"><i class="bi bi-info-circle"></i> Logos are stored in the database, so they survive redeploys on hosts without permanent file storage. Max 2&nbsp;MB per logo, 512&nbsp;KB for the favicon.</p>
 {% endblock %}

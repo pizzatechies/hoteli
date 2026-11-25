@@ -177,7 +177,8 @@ EMAIL_PORT = int(env("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "Hoteli <no-reply@hoteli.local>")
+# The display name is replaced by the hotel name (from Settings) when emailing guests.
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@hoteli.local")
 
 # --------------------------------------------------------------------------------------
 # M-Pesa (Safaricom Daraja)

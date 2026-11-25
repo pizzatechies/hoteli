@@ -49,6 +49,24 @@ class HotelSettingsForm(BootstrapMixin, forms.ModelForm):
         }
 
 
+class HotelIdentityForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = HotelSettings
+        fields = ["name", "tagline", "legal_name", "logo_show_name"]
+        labels = {"name": "Hotel name", "logo_show_name": "Show the hotel name next to the logo"}
+        help_texts = {
+            "name": "Used everywhere: website, browser tabs, staff area, emails, invoices and receipts.",
+            "tagline": "Short line under the name on the website, e.g. Comfort, the Kenyan way.",
+            "logo_show_name": "Turn off if your logo already includes the name.",
+        }
+
+    def clean_name(self):
+        name = " ".join(self.cleaned_data["name"].split())
+        if len(name) < 2:
+            raise forms.ValidationError("Enter the hotel's name.")
+        return name
+
+
 class LogoUploadForm(forms.Form):
     file = forms.FileField(widget=forms.ClearableFileInput(attrs={
         "class": "form-control", "accept": "image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/x-icon,.ico,.svg",

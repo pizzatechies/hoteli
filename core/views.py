@@ -21,7 +21,7 @@ from rooms.models import Room
 
 from . import reports
 from .branding import read_logo
-from .forms import DateRangeForm, HotelSettingsForm, LogoUploadForm
+from .forms import DateRangeForm, HotelIdentityForm, HotelSettingsForm, LogoUploadForm
 from .models import AuditLog, BrandAsset, HotelSettings, log_action
 
 
@@ -232,14 +232,21 @@ def branding(request):
     hotel, _ = HotelSettings.objects.get_or_create(pk=1)
     assets = {a.kind: a for a in BrandAsset.objects.defer("data")}
     errors = {}
-    if request.method == "POST":
+    is_identity = request.method == "POST" and request.POST.get("action") == "identity"
+    identity_form = HotelIdentityForm(request.POST if is_identity else None, instance=hotel, prefix="hotel")
+    if is_identity:
+        old_name = HotelSettings.objects.get(pk=hotel.pk).name
+        if identity_form.is_valid():
+            identity_form.save()
+            if old_name != hotel.name:
+                log_action(request.user, "settings.rename", hotel, f"Renamed hotel from '{old_name}' to '{hotel.name}'")
+                messages.success(request, f"Hotel renamed to “{hotel.name}”. The new name now shows everywhere.")
+            else:
+                messages.success(request, "Hotel name and tagline saved.")
+            return redirect("core:branding")
+    elif request.method == "POST":
         kind = request.POST.get("kind", "")
         action = request.POST.get("action", "upload")
-        if action == "toggle_name":
-            hotel.logo_show_name = bool(request.POST.get("logo_show_name"))
-            hotel.save()
-            messages.success(request, "Logo display updated.")
-            return redirect("core:branding")
         if kind not in BrandAsset.Kind.values:
             raise Http404()
         label = BrandAsset.Kind(kind).label
@@ -276,7 +283,7 @@ def branding(request):
          "help": "The small square icon in browser tabs and bookmarks. Square PNG (at least 64 × 64 px), ICO or SVG. "
                  "Falls back to the main logo."},
     ]
-    return render(request, "core/branding.html", {"slots": slots, "hotel_obj": hotel})
+    return render(request, "core/branding.html", {"slots": slots, "hotel_obj": hotel, "identity_form": identity_form})
 
 
 def brand_asset(request, kind):

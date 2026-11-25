@@ -3,7 +3,7 @@
 {% block page_title %}Hotel settings{% endblock %}
 {% block content %}
 <div class="row g-3">
-  <div class="col-xl-7"><div class="card"><div class="card-header">Property &amp; policies</div><div class="card-body">
+  <div class="col-xl-7"><div class="card"><div class="card-header d-flex justify-content-between"><span>Property &amp; policies</span><a href="{% url 'core:branding' %}" class="small fw-normal">Hotel name &amp; logos</a></div><div class="card-body">
     <form method="post">{% csrf_token %}
       {% include "partials/form.html" %}
       <button class="btn btn-primary mt-3">Save settings</button>

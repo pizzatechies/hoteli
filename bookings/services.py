@@ -8,6 +8,7 @@ or post the same night twice.
 import datetime
 import logging
 from decimal import ROUND_CEILING, Decimal
+from email.utils import formataddr, parseaddr
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -564,11 +565,12 @@ def send_booking_confirmation(booking):
         return False
     hotel = HotelSettings.load()
     context = {"booking": booking, "hotel": hotel, "site_url": settings.SITE_URL}
+    _display, address = parseaddr(settings.DEFAULT_FROM_EMAIL)
     try:
         send_mail(
             subject=f"Booking confirmed – {booking.reference} | {hotel.name}",
             message=render_to_string("emails/booking_confirmation.txt", context),
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=formataddr((hotel.name, address)) if address else settings.DEFAULT_FROM_EMAIL,
             recipient_list=[booking.guest.email],
             fail_silently=False,
         )
