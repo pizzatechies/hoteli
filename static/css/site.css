@@ -1,21 +1,37 @@
 :root {
   --brand: #0f766e;
-  --brand-dark: #115e59;
+  --brand-dark: color-mix(in srgb, var(--brand) 80%, black);
+  --brand-soft: color-mix(in srgb, var(--brand) 7%, white);
+  --heading-font: "Playfair Display";
   --accent: #d97706;
   --ink: #0f172a;
   --bs-font-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 body.site { color: var(--ink); background: #fff; }
-h1, h2, h3, .display-font { font-family: "Playfair Display", Georgia, serif; }
+h1, h2, h3, .display-font { font-family: var(--heading-font), Georgia, serif; }
 a { color: var(--brand); }
 .btn-brand { background: var(--brand); color: #fff; border: none; padding: .55rem 1.2rem; border-radius: 999px; font-weight: 600; }
 .btn-brand:hover, .btn-brand:focus { background: var(--brand-dark); color: #fff; }
 .btn-accent { background: var(--accent); color: #fff; border-radius: 999px; font-weight: 600; }
 .btn-accent:hover { background: #b45309; color: #fff; }
 .text-brand { color: var(--brand) !important; }
-.bg-brand-soft { background: #f0fdfa; }
+.bg-brand-soft, .sec-soft { background: var(--brand-soft); }
+.sec-brand { background: var(--brand); color: #fff; }
+.sec-dark { background: var(--ink); color: #e2e8f0; }
+.sec-brand .text-body-secondary, .sec-dark .text-body-secondary { color: rgba(255,255,255,.78) !important; }
+.sec-brand .eyebrow, .sec-dark .eyebrow { color: rgba(255,255,255,.85); }
+.sec-brand .btn-brand { background: #fff; color: var(--brand); }
+.sec-dark .card, .sec-brand .card { color: var(--ink); }
+.site-logo { height: 36px; width: auto; }
+.gallery-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 14px; }
+.feature-icon { width: 52px; height: 52px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--brand-soft); color: var(--brand); font-size: 1.5rem; }
+.sec-brand .feature-icon, .sec-dark .feature-icon { background: rgba(255,255,255,.12); color: #fff; }
+.quote-card { border: none; border-radius: 16px; box-shadow: 0 6px 24px rgba(15,23,42,.06); height: 100%; }
+.cta-band { border-radius: 20px; padding: 3rem 2rem; background-size: cover; background-position: center; position: relative; overflow: hidden; }
+.preview-bar { background: #fef3c7; color: #78350f; font-size: .85rem; padding: .4rem 0; text-align: center; }
 .site-nav { background: rgba(255,255,255,.96); backdrop-filter: blur(6px); border-bottom: 1px solid #eef0f3; }
-.site-brand { font-family: "Playfair Display", Georgia, serif; font-weight: 700; font-size: 1.3rem; display: inline-flex; align-items: center; gap: .5rem; color: var(--ink); }
+.site-brand { font-family: var(--heading-font), Georgia, serif; font-weight: 700; font-size: 1.3rem; display: inline-flex; align-items: center; gap: .5rem; color: var(--ink); }
 .brand-mark { display: inline-flex; width: 34px; height: 34px; border-radius: 9px; align-items: center; justify-content: center;
   background: var(--brand); color: #fff; font-size: 1rem; }
 .site-nav .nav-link { font-weight: 500; color: #334155; }
@@ -53,7 +69,7 @@ a { color: var(--brand); }
 .steps .num { width: 22px; height: 22px; border-radius: 50%; background: #e2e8f0; display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; }
 .steps .step.active .num { background: var(--brand); color: #fff; }
 .mpesa-brand { color: #16a34a; font-weight: 700; }
-.page-header { background: linear-gradient(135deg, #f0fdfa, #fff7ed); padding: 3rem 0 2.5rem; }
+.page-header { background: linear-gradient(135deg, var(--brand-soft), #fff7ed); padding: 3rem 0 2.5rem; }
 .menu-item { display: flex; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-bottom: 1px dashed #e2e8f0; }
 .menu-item:last-child { border-bottom: none; }
 @media (max-width: 575.98px) { .section { padding: 3rem 0; } .hero { min-height: auto; padding: 3rem 0; } }

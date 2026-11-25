@@ -105,3 +105,128 @@ class WebsiteBookingTests(HotelTestCase):
         self.assertEqual(ContactMessage.objects.count(), 1)
         self.login(self.reception)
         self.assertContains(self.client.get(reverse("website:inbox")), "Do you have a pool?")
+
+
+class WebsiteBuilderTests(HotelTestCase):
+    def setUp(self):
+        super().setUp()
+        from website import builder
+
+        self.builder = builder
+
+    def test_manager_creates_page_from_template_and_publishes(self):
+        from website.models import Page
+
+        self.login(self.manager)
+        resp = self.client.post(reverse("website:builder_page_create"), {"title": "Events & Weddings", "template": "events"})
+        page = Page.objects.get()
+        self.assertRedirects(resp, reverse("website:builder_page", args=[page.pk]))
+        self.assertEqual(page.slug, "events-weddings")
+        self.assertGreater(page.sections.count(), 2)
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("website:page", args=[page.slug])).status_code, 404)
+        self.login(self.manager)
+        self.assertContains(self.client.get(reverse("website:page", args=[page.slug])), "this page is a draft")
+        self.client.post(reverse("website:builder_page_action", args=[page.pk, "publish"]))
+        self.client.logout()
+        resp = self.client.get(reverse("website:page", args=[page.slug]))
+        self.assertContains(resp, "Conferences, workshops")
+        self.assertContains(self.client.get("/"), "Events &amp; Weddings")  # appears in the menu
+
+    def test_builder_page_replaces_homepage(self):
+        page = self.builder.create_page(title="Home", template="home", is_home=True, is_published=True)
+        hero = page.sections.get(kind="HERO")
+        hero.title = "Karibu to our lakeside lodge"
+        hero.save()
+        resp = self.client.get("/")
+        self.assertContains(resp, "Karibu to our lakeside lodge")
+        self.assertContains(resp, "Standard")  # rooms section
+        self.assertContains(resp, 'name="check_in"')  # booking search
+        second = self.builder.create_page(title="Home 2", is_home=True, is_published=True)
+        page.refresh_from_db()
+        self.assertFalse(page.is_home)
+        self.assertTrue(second.is_home)
+
+    def test_section_add_edit_move_hide_delete(self):
+        page = self.builder.create_page(title="Info", is_published=True)
+        self.login(self.manager)
+        self.client.post(reverse("website:builder_section_add", args=[page.pk]), {"kind": "TEXT"})
+        self.client.post(reverse("website:builder_section_add", args=[page.pk]), {"kind": "FAQ"})
+        text, faq = page.sections.order_by("order")
+        resp = self.client.post(reverse("website:builder_section", args=[text.pk]), {
+            "title": "House rules", "body": "No smoking.\n\nQuiet hours 10pm.", "align": "left",
+            "background": "soft", "is_visible": "on", "eyebrow": "",
+        })
+        self.assertRedirects(resp, reverse("website:builder_section", args=[text.pk]))
+        self.client.post(reverse("website:builder_section_action", args=[faq.pk, "up"]))
+        self.assertEqual(list(page.sections.order_by("order").values_list("kind", flat=True)), ["FAQ", "TEXT"])
+        self.client.post(reverse("website:builder_section_action", args=[text.pk, "duplicate"]))
+        self.assertEqual(page.sections.filter(kind="TEXT").count(), 2)
+        self.client.post(reverse("website:builder_section_action", args=[faq.pk, "toggle"]))
+        public = self.client.get(reverse("website:page", args=[page.slug]))
+        self.assertContains(public, "House rules")
+        self.assertContains(public, "Quiet hours 10pm.")
+        self.assertNotContains(public, "What time is check-in?")
+        self.client.post(reverse("website:builder_section_action", args=[faq.pk, "delete"]))
+        self.assertFalse(page.sections.filter(kind="FAQ").exists())
+
+    def test_unsafe_links_and_colours_rejected(self):
+        page = self.builder.create_page(title="Promo", template="blank")
+        section = self.builder.add_section(page, "CTA")
+        self.login(self.manager)
+        resp = self.client.post(reverse("website:builder_section", args=[section.pk]), {
+            "title": "x", "button_text": "Click", "button_url": "javascript:alert(1)", "background": "brand",
+            "is_visible": "on",
+        })
+        self.assertContains(resp, "Links must start with")
+        for bad in ["red;}</style><script>", "#zzzzzz"]:
+            resp = self.client.post(reverse("website:builder"), {
+                "theme-primary_color": bad, "theme-accent_color": "#d97706",
+                "theme-dark_color": "#0f172a", "theme-heading_font": "Lora",
+            })
+            self.assertEqual(resp.status_code, 200)  # re-rendered with errors, not saved
+            self.assertTrue(resp.context["theme_form"].errors)
+        self.assertContains(resp, "hex colour")
+        self.client.post(reverse("website:builder"), {
+            "theme-primary_color": "#7c3aed", "theme-accent_color": "#d97706", "theme-dark_color": "#0f172a",
+            "theme-heading_font": "Lora",
+        })
+        self.client.logout()
+        resp = self.client.get("/")
+        self.assertContains(resp, "--brand:#7c3aed")
+        self.assertContains(resp, "family=Lora")
+
+    def test_text_is_escaped(self):
+        page = self.builder.create_page(title="Safe", is_published=True)
+        self.builder.add_section(page, "TEXT", {"title": "<script>alert(1)</script>", "body": "<b>hi</b>"})
+        resp = self.client.get(reverse("website:page", args=[page.slug]))
+        self.assertNotContains(resp, "<script>alert(1)</script>")
+        self.assertContains(resp, "&lt;b&gt;hi&lt;/b&gt;")
+
+    def test_contact_section_returns_to_page(self):
+        page = self.builder.create_page(title="Venue", template="contact", is_published=True)
+        resp = self.client.post(reverse("website:contact"), {
+            "name": "Tom", "email": "tom@example.com", "subject": "Quote", "message": "Hi", "next": page.get_absolute_url(),
+        })
+        self.assertRedirects(resp, page.get_absolute_url())
+        resp = self.client.post(reverse("website:contact"), {
+            "name": "Tom", "email": "tom@example.com", "subject": "Quote", "message": "Hi", "next": "https://evil.example/",
+        })
+        self.assertRedirects(resp, reverse("website:contact"))
+
+    def test_only_managers_can_use_builder(self):
+        self.login(self.reception)
+        self.assertEqual(self.client.get(reverse("website:builder")).status_code, 403)
+        self.login(self.manager)
+        self.assertEqual(self.client.get(reverse("website:builder")).status_code, 200)
+
+    def test_every_section_type_renders(self):
+        from website.models import Section
+
+        page = self.builder.create_page(title="All", is_published=True)
+        for kind in Section.Kind.values:
+            self.builder.add_section(page, kind)
+        resp = self.client.get(reverse("website:page", args=[page.slug]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Frequently asked questions")
+        self.assertContains(resp, "Why book direct")

@@ -1,0 +1,15 @@
+{% load hotel %}
+<div class="container">
+  {% include "website/sections/_heading.html" with center=True %}
+  {% if menu_items %}
+  <div class="row g-3 justify-content-center">
+    {% for item in menu_items %}{% if forloop.counter <= section.limit %}
+    <div class="col-md-6 col-lg-4"><div class="card quote-card"><div class="card-body d-flex justify-content-between gap-3">
+      <div><div class="fw-semibold">{{ item.name }}</div><div class="small text-body-secondary">{{ item.description|default:item.category.name }}</div></div>
+      <div class="fw-semibold text-nowrap text-brand">KES {{ item.price|money:0 }}</div>
+    </div></div></div>
+    {% endif %}{% endfor %}
+  </div>
+  {% else %}<p class="text-center text-body-secondary">Our menu will be published soon.</p>{% endif %}
+  {% if section.button_text and section.button_url %}<div class="text-center mt-4"><a href="{{ section.button_url }}" class="btn btn-brand">{{ section.button_text }}</a></div>{% endif %}
+</div>

@@ -1,0 +1,12 @@
+<div class="container">
+  {% include "website/sections/_heading.html" with center=True %}
+  <div class="row g-4 justify-content-center">
+    {% for f in section.features %}
+    <div class="col-sm-6 col-lg-{% if section.features|length == 4 %}3{% else %}4{% endif %} text-center">
+      <span class="feature-icon mb-3"><i class="bi bi-{{ f.icon }}"></i></span>
+      <h3 class="h6" style="font-family:inherit">{{ f.title }}</h3>
+      <p class="small text-body-secondary mb-0">{{ f.text }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>

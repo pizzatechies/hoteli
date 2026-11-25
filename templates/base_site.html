@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static hotel %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -6,10 +6,11 @@
   <title>{% block title %}{{ hotel.tagline }}{% endblock %} · {{ hotel.name }}</title>
   <meta name="description" content="{% block meta_description %}{{ hotel.name }} – {{ hotel.tagline }}. Book direct online and pay securely with M-Pesa.{% endblock %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family={{ site.heading_font|default:'Playfair Display'|urlencode }}:wght@600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="{% static 'css/site.css' %}" rel="stylesheet">
+  <style>:root{--brand:{{ site.primary_color|hexcolor:"#0f766e" }};--accent:{{ site.accent_color|hexcolor:"#d97706" }};--ink:{{ site.dark_color|hexcolor:"#0f172a" }};--heading-font:"{{ site.heading_font|default:'Playfair Display' }}";}</style>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="site">
@@ -17,7 +18,7 @@
 <nav class="navbar navbar-expand-lg site-nav sticky-top">
   <div class="container">
     <a class="navbar-brand site-brand" href="{% url 'website:home' %}">
-      <span class="brand-mark"><i class="bi bi-building"></i></span> {{ hotel.name }}
+      {% if site.logo_url %}<img src="{{ site.logo_url }}" alt="" class="site-logo">{% else %}<span class="brand-mark"><i class="bi bi-building"></i></span>{% endif %} {{ hotel.name }}
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav" aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
@@ -28,6 +29,7 @@
         <li class="nav-item"><a class="nav-link {% if path|slice:':7' == '/rooms/' %}active{% endif %}" href="{% url 'website:rooms' %}">Rooms</a></li>
         <li class="nav-item"><a class="nav-link {% if path == '/dining/' %}active{% endif %}" href="{% url 'website:dining' %}">Dining</a></li>
         <li class="nav-item"><a class="nav-link {% if path == '/facilities/' %}active{% endif %}" href="{% url 'website:facilities' %}">Facilities</a></li>
+        {% for p in nav_pages %}<li class="nav-item"><a class="nav-link {% if path == p.get_absolute_url %}active{% endif %}" href="{{ p.get_absolute_url }}">{{ p.menu_label }}</a></li>{% endfor %}
         <li class="nav-item"><a class="nav-link {% if path == '/contact/' %}active{% endif %}" href="{% url 'website:contact' %}">Contact</a></li>
         <li class="nav-item"><a class="nav-link {% if '/booking/' in path %}active{% endif %}" href="{% url 'website:lookup' %}"><i class="bi bi-search"></i> My booking</a></li>
         {% if hotel.website_booking_enabled %}
@@ -48,7 +50,7 @@
     <div class="row g-4">
       <div class="col-lg-4">
         <div class="site-brand text-white mb-2"><span class="brand-mark"><i class="bi bi-building"></i></span> {{ hotel.name }}</div>
-        <p class="text-white-50 mb-3">{{ hotel.tagline }}</p>
+        <p class="text-white-50 mb-3">{{ site.footer_text|default:hotel.tagline }}</p>
         <div class="d-flex gap-3 fs-5">
           {% if site.facebook_url %}<a href="{{ site.facebook_url }}" class="text-white-50" aria-label="Facebook"><i class="bi bi-facebook"></i></a>{% endif %}
           {% if site.instagram_url %}<a href="{{ site.instagram_url }}" class="text-white-50" aria-label="Instagram"><i class="bi bi-instagram"></i></a>{% endif %}
@@ -62,6 +64,7 @@
           <li><a href="{% url 'website:dining' %}">Dining</a></li>
           <li><a href="{% url 'website:facilities' %}">Facilities</a></li>
           <li><a href="{% url 'website:lookup' %}">Manage booking</a></li>
+          {% for p in nav_pages %}<li><a href="{{ p.get_absolute_url }}">{{ p.menu_label }}</a></li>{% endfor %}
         </ul>
       </div>
       <div class="col-6 col-lg-3">

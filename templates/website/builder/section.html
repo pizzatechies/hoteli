@@ -1,0 +1,35 @@
+{% extends "base_staff.html" %}
+{% block title %}Edit section{% endblock %}
+{% block page_title %}Website builder · {{ page.title }}{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <div><a href="{% url 'website:builder_page' page.pk %}" class="small"><i class="bi bi-arrow-left"></i> {{ page.title }}</a>
+    <h1 class="mt-1">{{ section.get_kind_display }}</h1></div>
+  <a href="{% url 'website:page' page.slug %}?preview=1#section-{{ section.pk }}" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up-right"></i> Open preview</a>
+</div>
+<div class="row g-3">
+  <div class="col-xxl-5 col-xl-6">
+    <div class="card"><div class="card-body">
+      {% if section.kind == "ROOMS" %}<p class="small text-body-secondary">Shows your active room types with photos and prices. Edit them under <a href="{% url 'rooms:types' %}">Room types</a>.</p>{% endif %}
+      {% if section.kind == "FACILITIES" %}<p class="small text-body-secondary">Shows the facilities list. Edit it under <a href="{% url 'website:manage' %}">Website content</a>.</p>{% endif %}
+      {% if section.kind == "MENU" %}<p class="small text-body-secondary">Shows available items from the <a href="{% url 'pos:menu' %}">restaurant menu</a>.</p>{% endif %}
+      {% if section.kind == "HERO" %}<p class="small text-body-secondary">The booking search lets guests check availability straight from the banner.</p>{% endif %}
+      <form method="post">{% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
+        <div class="row g-3">
+          {% for field in form.visible_fields %}{% include "partials/field.html" with field=field col="col-12" %}{% endfor %}
+        </div>
+        <div class="d-flex gap-2 mt-3 flex-wrap">
+          <button class="btn btn-primary"><i class="bi bi-check2"></i> Save &amp; refresh preview</button>
+          <button class="btn btn-outline-primary" name="then" value="back">Save &amp; back to page</button>
+        </div>
+      </form>
+    </div></div>
+  </div>
+  <div class="col-xxl-7 col-xl-6 d-none d-xl-block">
+    <div class="card"><div class="card-header d-flex justify-content-between"><span>Live preview</span><span class="small text-body-secondary fw-normal">Save to update</span></div>
+      <iframe src="{% url 'website:page' page.slug %}?preview=1#section-{{ section.pk }}" title="Preview" style="width:100%;height:75vh;border:0;border-radius:0 0 12px 12px"></iframe>
+    </div>
+  </div>
+</div>
+{% endblock %}

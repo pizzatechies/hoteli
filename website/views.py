@@ -5,10 +5,11 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from accounts import permissions as P
@@ -23,10 +24,12 @@ from mpesa.utils import normalize_phone
 from pos.models import MenuCategory
 from rooms.models import RoomType
 
+from . import builder
 from .forms import (
-    ContactForm, FacilityForm, GuestDetailsForm, LookupForm, PayForm, SearchForm, WebsiteContentForm,
+    ContactForm, FacilityForm, GuestDetailsForm, LookupForm, NewPageForm, PageForm, PayForm, SearchForm,
+    SectionForm, ThemeForm, WebsiteContentForm,
 )
-from .models import ContactMessage, Facility, WebsiteContent
+from .models import ContactMessage, Facility, Page, Section, WebsiteContent
 
 
 def _default_dates():
@@ -46,6 +49,9 @@ def _ceil(value):
 
 # ------------------------------------------------------------------------------ pages
 def home(request):
+    page = Page.objects.filter(is_home=True, is_published=True).first()
+    if page is not None:
+        return _render_page(request, page)
     return render(request, "website/home.html", {
         "search_form": _search_form(),
         "room_types": RoomType.objects.filter(is_active=True)[:6],
@@ -90,6 +96,9 @@ def contact(request):
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "Thank you! Your message has been sent. We'll get back to you shortly.")
+        nxt = request.POST.get("next", "")
+        if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}):
+            return redirect(nxt)
         return redirect("website:contact")
     return render(request, "website/contact.html", {"form": form})
 
@@ -322,3 +331,152 @@ def inbox_toggle(request, pk):
     msg.save(update_fields=["is_read"])
     return redirect(request.POST.get("next") or "website:inbox")
 
+
+
+# ------------------------------------------------------------------------------ website builder (public)
+def _can_preview(user):
+    return user.is_authenticated and user.has_role(*P.MANAGEMENT)
+
+
+def _render_page(request, page):
+    sections = [s for s in page.sections.all() if s.is_visible]
+    kinds = {s.kind for s in sections}
+    content = WebsiteContent.load()
+    context = {"page": page, "sections": sections, "preview": not page.is_published}
+    if Section.Kind.HERO in kinds:
+        context["search_form"] = _search_form()
+    if Section.Kind.ROOMS in kinds:
+        context["room_types"] = list(RoomType.objects.filter(is_active=True))
+    if Section.Kind.FACILITIES in kinds:
+        context["facilities"] = list(Facility.objects.filter(is_active=True))
+    if Section.Kind.MENU in kinds and content.show_dining_menu:
+        from pos.models import MenuItem
+
+        context["menu_items"] = list(
+            MenuItem.objects.filter(is_available=True, category__is_active=True).select_related("category")
+        )
+    if Section.Kind.CONTACT in kinds:
+        context["contact_form"] = ContactForm()
+    return render(request, "website/page.html", context)
+
+
+def page_view(request, slug):
+    page = get_object_or_404(Page, slug=slug)
+    if not page.is_published and not _can_preview(request.user):
+        raise Http404()
+    if page.is_home and page.is_published and not request.GET.get("preview"):
+        return redirect("website:home")
+    return _render_page(request, page)
+
+
+# ------------------------------------------------------------------------------ website builder (staff)
+@role_required(*P.MANAGEMENT)
+def builder_index(request):
+    content, _ = WebsiteContent.objects.get_or_create(pk=1)
+    theme_form = ThemeForm(request.POST or None, instance=content, prefix="theme")
+    if request.method == "POST" and theme_form.is_valid():
+        theme_form.save()
+        log_action(request.user, "website.theme", content, "Updated website theme")
+        messages.success(request, "Theme saved.")
+        return redirect("website:builder")
+    return render(request, "website/builder/index.html", {
+        "pages": Page.objects.prefetch_related("sections"),
+        "new_form": NewPageForm(initial={"template": "blank"}),
+        "theme_form": theme_form,
+        "has_home": Page.objects.filter(is_home=True, is_published=True).exists(),
+    })
+
+
+@role_required(*P.MANAGEMENT)
+@require_POST
+def builder_page_create(request):
+    form = NewPageForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Give the page a title.")
+        return redirect("website:builder")
+    page = builder.create_page(title=form.cleaned_data["title"], template=form.cleaned_data["template"])
+    log_action(request.user, "website.page_create", page, f"Created page {page.title}")
+    messages.success(request, f"Page '{page.title}' created as a draft. Edit the sections, then publish.")
+    return redirect("website:builder_page", pk=page.pk)
+
+
+@role_required(*P.MANAGEMENT)
+def builder_page(request, pk):
+    page = get_object_or_404(Page, pk=pk)
+    form = PageForm(request.POST or None, instance=page)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        log_action(request.user, "website.page_update", page, f"Updated page {page.title}")
+        messages.success(request, "Page settings saved." + (" It is live." if page.is_published else ""))
+        return redirect("website:builder_page", pk=pk)
+    return render(request, "website/builder/page.html", {
+        "page": page, "form": form, "sections": page.sections.all(), "kinds": Section.Kind.choices,
+    })
+
+
+@role_required(*P.MANAGEMENT)
+@require_POST
+def builder_page_action(request, pk, action):
+    page = get_object_or_404(Page, pk=pk)
+    if action == "publish":
+        page.is_published = not page.is_published
+        page.save(update_fields=["is_published", "updated_at"])
+        messages.success(request, f"'{page.title}' is now {'live' if page.is_published else 'a draft'}.")
+    elif action == "duplicate":
+        clone = builder.duplicate_page(page)
+        messages.success(request, f"Copied to '{clone.title}'.")
+        return redirect("website:builder_page", pk=clone.pk)
+    elif action == "delete":
+        title = page.title
+        page.delete()
+        log_action(request.user, "website.page_delete", None, f"Deleted page {title}")
+        messages.success(request, f"Page '{title}' deleted.")
+        return redirect("website:builder")
+    return redirect(request.POST.get("next") or reverse("website:builder_page", args=[pk]))
+
+
+@role_required(*P.MANAGEMENT)
+@require_POST
+def builder_section_add(request, pk):
+    page = get_object_or_404(Page, pk=pk)
+    kind = request.POST.get("kind")
+    if kind not in Section.Kind.values:
+        messages.error(request, "Unknown section type.")
+        return redirect("website:builder_page", pk=pk)
+    section = builder.add_section(page, kind)
+    messages.success(request, f"{section.get_kind_display()} added. Edit its content below.")
+    return redirect("website:builder_section", pk=section.pk)
+
+
+@role_required(*P.MANAGEMENT)
+def builder_section(request, pk):
+    section = get_object_or_404(Section.objects.select_related("page"), pk=pk)
+    form = SectionForm(request.POST or None, instance=section)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Section saved.")
+        if request.POST.get("then") == "back":
+            return redirect("website:builder_page", pk=section.page_id)
+        return redirect("website:builder_section", pk=pk)
+    return render(request, "website/builder/section.html", {
+        "section": section, "page": section.page, "form": form,
+    })
+
+
+@role_required(*P.MANAGEMENT)
+@require_POST
+def builder_section_action(request, pk, action):
+    section = get_object_or_404(Section, pk=pk)
+    page_id = section.page_id
+    if action in ("up", "down"):
+        builder.move_section(section, action)
+    elif action == "toggle":
+        section.is_visible = not section.is_visible
+        section.save(update_fields=["is_visible"])
+    elif action == "duplicate":
+        builder.duplicate_section(section)
+        messages.success(request, "Section duplicated.")
+    elif action == "delete":
+        section.delete()
+        messages.success(request, "Section removed.")
+    return redirect(reverse("website:builder_page", args=[page_id]) + "#sections")

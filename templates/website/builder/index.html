@@ -1,0 +1,61 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Website builder{% endblock %}
+{% block page_title %}Website builder{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <h1>Website builder</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="/" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up-right"></i> View website</a>
+    <a href="{% url 'website:manage' %}" class="btn btn-outline-secondary"><i class="bi bi-sliders"></i> Facilities &amp; contact info</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card mb-3"><div class="card-header d-flex justify-content-between align-items-center"><span>Pages</span>
+      <span class="small text-body-secondary fw-normal">Built-in pages (Rooms, Dining, Facilities, Contact, Booking) are always available.</span></div>
+      <div class="table-responsive"><table class="table align-middle mb-0">
+        <thead><tr><th>Page</th><th>Address</th><th>Sections</th><th>Status</th><th>Menu</th><th></th></tr></thead>
+        <tbody>
+        {% for p in pages %}
+          <tr>
+            <td><a href="{% url 'website:builder_page' p.pk %}" class="fw-semibold">{{ p.title }}</a>{% if p.is_home %} <span class="badge text-bg-primary"><i class="bi bi-house"></i> Homepage</span>{% endif %}</td>
+            <td class="small"><code>{% if p.is_home %}/{% else %}/p/{{ p.slug }}/{% endif %}</code></td>
+            <td>{{ p.sections.all|length }}</td>
+            <td>{% if p.is_published %}<span class="badge text-bg-success">Live</span>{% else %}<span class="badge text-bg-secondary">Draft</span>{% endif %}</td>
+            <td class="small">{% if p.show_in_nav and not p.is_home %}{{ p.menu_label }}{% else %}—{% endif %}</td>
+            <td class="text-end text-nowrap">
+              <a href="{% url 'website:page' p.slug %}?preview=1" target="_blank" class="btn btn-sm btn-light" title="Preview"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'website:builder_page' p.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="text-body-secondary">No pages yet. Create your first page – start from the Homepage template to take control of your home page.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+    {% if not has_home %}<div class="alert alert-info small"><i class="bi bi-info-circle"></i> Your homepage currently uses the built-in design. Create a page from the <strong>Homepage</strong> template, tick <em>Use as homepage</em> and publish it to design your own.</div>{% endif %}
+  </div>
+  <div class="col-xl-4">
+    <div class="card mb-3"><div class="card-header">New page</div><div class="card-body">
+      <form method="post" action="{% url 'website:builder_page_create' %}">{% csrf_token %}
+        {% include "partials/field.html" with field=new_form.title col="mb-2" %}
+        {% include "partials/field.html" with field=new_form.template col="mb-3" %}
+        <button class="btn btn-primary w-100"><i class="bi bi-plus-lg"></i> Create page</button>
+      </form>
+    </div></div>
+    <div class="card"><div class="card-header">Theme</div><div class="card-body">
+      <form method="post">{% csrf_token %}
+        <div class="row g-2">
+          {% include "partials/field.html" with field=theme_form.primary_color col="col-4" %}
+          {% include "partials/field.html" with field=theme_form.accent_color col="col-4" %}
+          {% include "partials/field.html" with field=theme_form.dark_color col="col-4" %}
+          {% include "partials/field.html" with field=theme_form.heading_font col="col-12" %}
+          {% include "partials/field.html" with field=theme_form.logo_url col="col-12" %}
+          {% include "partials/field.html" with field=theme_form.footer_text col="col-12" %}
+        </div>
+        <button class="btn btn-primary w-100 mt-3">Save theme</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,4 @@
+<div class="container" style="max-width: 860px">
+  {% if section.align == "center" %}{% include "website/sections/_heading.html" with center=True %}{% else %}{% include "website/sections/_heading.html" %}{% endif %}
+  <div class="{% if section.align == 'center' %}text-center{% endif %} fs-6 lh-lg">{{ section.body|linebreaks }}</div>
+</div>

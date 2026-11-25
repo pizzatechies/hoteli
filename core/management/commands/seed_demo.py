@@ -12,7 +12,9 @@ from core.models import HotelSettings
 from housekeeping.models import HousekeepingTask, MaintenanceRequest
 from pos.models import MenuCategory, MenuItem
 from rooms.models import Room, RoomType, SeasonalRate
-from website.models import Facility, WebsiteContent
+from website.builder import IMG as BUILDER_IMG
+from website.builder import create_page
+from website.models import Facility, Page, WebsiteContent
 
 IMG = "https://images.unsplash.com/{}?auto=format&fit=crop&w=1200&q=70"
 
@@ -154,6 +156,23 @@ class Command(BaseCommand):
                 for name, price, kind, desc in items:
                     MenuItem.objects.create(category=cat, name=name, price=Decimal(price), kind=kind, description=desc)
             self.stdout.write(self.style.SUCCESS("Created restaurant & bar menu."))
+
+        if not Page.objects.exists():
+            create_page(title="Home", template="home", slug="home", is_home=True, is_published=True,
+                        show_in_nav=False, meta_description="Book direct and pay with M-Pesa.")
+            events = create_page(title="Events & conferences", template="events", slug="events",
+                                 is_published=True, nav_label="Events", nav_order=20)
+            gallery = events.sections.create(
+                kind="GALLERY", order=25, title="Our venues", background="white",
+                items="\n".join([
+                    BUILDER_IMG.format("photo-1540575467063-178a50c2df87") + " | Main conference hall",
+                    BUILDER_IMG.format("photo-1517457373958-b7bdd4587205") + " | Workshops & training",
+                    BUILDER_IMG.format("photo-1414235077428-338989a2e8c0") + " | Private dining",
+                ]),
+            )
+            gallery.save()
+            create_page(title="About us", template="about", slug="about", is_published=False, nav_order=30)
+            self.stdout.write(self.style.SUCCESS("Created website builder pages (Home, Events, About draft)."))
 
         if not opts["no_bookings"] and not Booking.objects.exists():
             self._bookings()

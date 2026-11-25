@@ -21,7 +21,7 @@ def hotel(request):
             "management": user.has_role(*P.MANAGEMENT),
             "admin": user.is_admin,
         }
-    from website.models import ContactMessage, WebsiteContent
+    from website.models import ContactMessage, Page, WebsiteContent
 
     unread = 0
     if nav.get("front_desk"):
@@ -30,6 +30,10 @@ def hotel(request):
         "hotel": HotelSettings.load(),
         "site": WebsiteContent.load(),
         "unread_messages": unread,
+        "nav_pages": [] if request.path.startswith("/staff/") else list(
+            Page.objects.filter(is_published=True, show_in_nav=True, is_home=False).only(
+                "title", "slug", "nav_label", "nav_order", "is_home")
+        ),
         "mpesa_mode": mode_label(),
         "mpesa_simulated": settings.MPESA_SIMULATE,
         "nav": nav,

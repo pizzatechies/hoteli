@@ -1,0 +1,7 @@
+<div class="container">
+  <div class="text-center mx-auto" style="max-width: 720px">
+    {% if section.title %}<h2 class="section-title mb-2">{{ section.title }}</h2>{% endif %}
+    {% if section.subtitle %}<p class="mb-4 {% if section.background == 'white' or section.background == 'soft' %}text-body-secondary{% else %}opacity-75{% endif %}">{{ section.subtitle }}</p>{% endif %}
+    {% if section.button_text and section.button_url %}<a href="{{ section.button_url }}" class="btn btn-brand btn-lg px-4">{{ section.button_text }}</a>{% endif %}
+  </div>
+</div>

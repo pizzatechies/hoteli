@@ -1,0 +1,7 @@
+{% if section.eyebrow or section.title or section.subtitle %}
+<div class="{% if center %}text-center mx-auto{% endif %} mb-5" {% if center %}style="max-width: 720px"{% endif %}>
+  {% if section.eyebrow %}<div class="eyebrow">{{ section.eyebrow }}</div>{% endif %}
+  {% if section.title %}<h2 class="section-title">{{ section.title }}</h2>{% endif %}
+  {% if section.subtitle %}<p class="text-body-secondary mb-0">{{ section.subtitle }}</p>{% endif %}
+</div>
+{% endif %}

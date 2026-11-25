@@ -1,0 +1,8 @@
+<div class="container">
+  {% include "website/sections/_heading.html" with center=True %}
+  <div class="row g-4">
+    {% for rt in room_types %}{% if forloop.counter <= section.limit %}<div class="col-md-6 col-lg-4">{% include "website/_room_card.html" %}</div>{% endif %}
+    {% empty %}<p class="text-center text-body-secondary">Room details coming soon.</p>{% endfor %}
+  </div>
+  <div class="text-center mt-4"><a href="{% url 'website:rooms' %}" class="btn btn-outline-dark rounded-pill px-4">All rooms</a></div>
+</div>

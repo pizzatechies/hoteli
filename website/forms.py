@@ -2,7 +2,7 @@ from django import forms
 
 from core.forms import BootstrapMixin, DateInput
 
-from .models import ContactMessage, Facility, WebsiteContent
+from .models import ContactMessage, Facility, Page, Section, WebsiteContent
 
 
 class SearchForm(BootstrapMixin, forms.Form):
@@ -83,11 +83,80 @@ class ContactForm(BootstrapMixin, forms.ModelForm):
         return data
 
 
+THEME_FIELDS = ["primary_color", "accent_color", "dark_color", "heading_font", "logo_url", "footer_text"]
+
+
 class WebsiteContentForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = WebsiteContent
-        exclude = ["updated_at"]
+        exclude = ["updated_at", *THEME_FIELDS]
         widgets = {"about_text": forms.Textarea(attrs={"rows": 5})}
+
+
+class ColorInput(forms.TextInput):
+    input_type = "color"
+
+
+class ThemeForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = WebsiteContent
+        fields = THEME_FIELDS
+        labels = {"primary_color": "Primary", "accent_color": "Accent", "dark_color": "Dark",
+                  "logo_url": "Logo URL"}
+        widgets = {"primary_color": ColorInput(attrs={"class": "form-control-color"}),
+                   "accent_color": ColorInput(attrs={"class": "form-control-color"}),
+                   "dark_color": ColorInput(attrs={"class": "form-control-color"})}
+
+
+class PageForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Page
+        fields = ["title", "slug", "meta_description", "is_published", "is_home", "show_in_nav", "nav_label",
+                  "nav_order"]
+        labels = {"is_published": "Published (visible to guests)", "nav_label": "Menu label",
+                  "nav_order": "Menu position", "slug": "Web address"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["slug"].required = False
+        self.fields["slug"].help_text = "Leave blank to create it from the title."
+
+
+class NewPageForm(BootstrapMixin, forms.Form):
+    title = forms.CharField(max_length=120)
+    template = forms.ChoiceField(choices=[])
+
+    def __init__(self, *args, **kwargs):
+        from .builder import PAGE_TEMPLATES
+
+        super().__init__(*args, **kwargs)
+        self.fields["template"].choices = [(k, v["label"]) for k, v in PAGE_TEMPLATES.items()]
+        self.fields["template"].label = "Start from"
+
+
+class SectionForm(BootstrapMixin, forms.ModelForm):
+    COMMON = ["background", "is_visible"]
+
+    class Meta:
+        model = Section
+        fields = ["eyebrow", "title", "subtitle", "body", "image_url", "image_right", "align", "show_search",
+                  "button_text", "button_url", "limit", "items", "embed_url", "background", "is_visible"]
+        widgets = {"body": forms.Textarea(attrs={"rows": 6}), "items": forms.Textarea(attrs={"rows": 6})}
+        labels = {"image_url": "Image URL", "button_url": "Button link", "embed_url": "Google Maps embed URL"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        keep = set(self.instance.fields) | set(self.COMMON)
+        for name in list(self.fields):
+            if name not in keep:
+                del self.fields[name]
+        if "items" in self.fields:
+            self.fields["items"].help_text = Section.ITEM_HELP.get(self.instance.kind, "")
+            self.fields["items"].label = "Items"
+        if "limit" in self.fields:
+            self.fields["limit"].widget.attrs["max"] = 24
+        if "is_visible" in self.fields:
+            self.fields["is_visible"].label = "Visible on the website"
 
 
 class FacilityForm(BootstrapMixin, forms.ModelForm):

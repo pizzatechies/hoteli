@@ -1,0 +1,15 @@
+{% extends "base_site.html" %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block meta_description %}{{ page.meta_description|default:hotel.tagline }}{% endblock %}
+{% block content %}
+{% if preview %}<div class="preview-bar"><i class="bi bi-eye"></i> Preview – this page is a draft and not visible to guests. <a href="{% url 'website:builder_page' page.pk %}">Back to the builder</a></div>{% endif %}
+{% for section in sections %}
+  {% with "website/sections/"|add:section.kind|lower|add:".html" as tpl %}
+  <section id="section-{{ section.pk }}" class="sec-{{ section.background }} {% if section.kind != 'HERO' %}section{% endif %}">
+    {% include tpl %}
+  </section>
+  {% endwith %}
+{% empty %}
+<section class="section"><div class="container text-center text-body-secondary">This page has no content yet.</div></section>
+{% endfor %}
+{% endblock %}

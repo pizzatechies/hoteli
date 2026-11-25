@@ -1,0 +1,11 @@
+<div class="hero" {% if section.image_url %}style="background-image:url('{{ section.image_url }}')"{% else %}style="background:var(--ink)"{% endif %}>
+  <div class="container py-5">
+    <div class="row"><div class="col-lg-8">
+      {% if section.eyebrow %}<div class="eyebrow mb-2">{{ section.eyebrow }}</div>{% else %}<div class="eyebrow mb-2">Welcome to {{ hotel.name }}</div>{% endif %}
+      <h1 class="mb-3">{{ section.title|default:hotel.name }}</h1>
+      {% if section.subtitle %}<p class="lead mb-4" style="color:rgba(255,255,255,.88)">{{ section.subtitle }}</p>{% endif %}
+      {% if section.button_text and section.button_url %}<a href="{{ section.button_url }}" class="btn btn-brand btn-lg mb-4">{{ section.button_text }}</a>{% endif %}
+    </div></div>
+    {% if section.show_search and hotel.website_booking_enabled and search_form %}{% include "website/_search_form.html" %}{% endif %}
+  </div>
+</div>

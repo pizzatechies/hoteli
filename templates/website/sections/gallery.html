@@ -1,0 +1,9 @@
+<div class="container">
+  {% include "website/sections/_heading.html" with center=True %}
+  <div class="row g-3">
+    {% for photo in section.gallery %}
+    <div class="col-6 col-lg-4"><figure class="mb-0"><img src="{{ photo.url }}" alt="{{ photo.caption }}" class="gallery-img" loading="lazy">
+      {% if photo.caption %}<figcaption class="small text-body-secondary mt-1">{{ photo.caption }}</figcaption>{% endif %}</figure></div>
+    {% endfor %}
+  </div>
+</div>

@@ -1,0 +1,11 @@
+<div class="container" style="max-width: 860px">
+  {% include "website/sections/_heading.html" with center=True %}
+  <div class="accordion" id="faq-{{ section.pk }}">
+    {% for item in section.faqs %}
+    <div class="accordion-item">
+      <h3 class="accordion-header"><button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#faq-{{ section.pk }}-{{ forloop.counter }}" style="font-family:var(--bs-body-font-family);font-weight:600">{{ item.q }}</button></h3>
+      <div id="faq-{{ section.pk }}-{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" data-bs-parent="#faq-{{ section.pk }}"><div class="accordion-body text-body-secondary">{{ item.a }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>

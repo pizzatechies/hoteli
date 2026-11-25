@@ -1,0 +1,8 @@
+<div class="container">
+  {% include "website/sections/_heading.html" with center=True %}
+  <div class="row g-3">
+    {% for f in facilities %}{% if forloop.counter <= section.limit %}
+    <div class="col-6 col-md-3"><div class="facility"><i class="bi bi-{{ f.icon }}"></i><h3 class="h6 mt-2 mb-1" style="font-family:inherit">{{ f.name }}</h3><p class="small text-body-secondary mb-0">{{ f.description }}</p></div></div>
+    {% endif %}{% empty %}<p class="text-center text-body-secondary">Add facilities under Website content.</p>{% endfor %}
+  </div>
+</div>

@@ -147,6 +147,9 @@ from django.contrib.messages import constants as message_constants  # noqa: E402
 
 MESSAGE_TAGS = {message_constants.ERROR: "danger"}
 
+# The website builder previews pages in an iframe on the same site.
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",

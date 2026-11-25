@@ -57,7 +57,8 @@
       {% if nav.front_desk %}
       <div class="nav-section">Website</div>
       <a href="{% url 'website:inbox' %}" class="{% if '/inbox/' in path %}active{% endif %}"><i class="bi bi-envelope"></i> Inbox {% if unread_messages %}<span class="badge rounded-pill text-bg-danger ms-auto">{{ unread_messages }}</span>{% endif %}</a>
-      {% if nav.management %}<a href="{% url 'website:manage' %}" class="{% if '/staff/website/' in path %}active{% endif %}"><i class="bi bi-globe2"></i> Website content</a>{% endif %}
+      {% if nav.management %}<a href="{% url 'website:builder' %}" class="{% if '/staff/website/builder/' in path %}active{% endif %}"><i class="bi bi-brush"></i> Website builder</a>
+      <a href="{% url 'website:manage' %}" class="{% if '/staff/website/' in path and '/builder/' not in path %}active{% endif %}"><i class="bi bi-globe2"></i> Website content</a>{% endif %}
       {% endif %}
       {% if nav.management %}
       <div class="nav-section">Setup</div>

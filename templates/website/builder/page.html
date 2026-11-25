@@ -1,0 +1,73 @@
+{% extends "base_staff.html" %}
+{% block title %}Edit {{ page.title }}{% endblock %}
+{% block page_title %}Website builder · {{ page.title }}{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <div>
+    <a href="{% url 'website:builder' %}" class="small"><i class="bi bi-arrow-left"></i> All pages</a>
+    <h1 class="mt-1">{{ page.title }} {% if page.is_published %}<span class="badge text-bg-success fs-6">Live</span>{% else %}<span class="badge text-bg-secondary fs-6">Draft</span>{% endif %}{% if page.is_home %} <span class="badge text-bg-primary fs-6">Homepage</span>{% endif %}</h1>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'website:page' page.slug %}?preview=1" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-eye"></i> Preview</a>
+    <form method="post" action="{% url 'website:builder_page_action' page.pk 'publish' %}">{% csrf_token %}
+      {% if page.is_published %}<button class="btn btn-outline-warning"><i class="bi bi-eye-slash"></i> Unpublish</button>
+      {% else %}<button class="btn btn-success"><i class="bi bi-rocket-takeoff"></i> Publish</button>{% endif %}
+    </form>
+    <div class="dropdown"><button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">More</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><form method="post" action="{% url 'website:builder_page_action' page.pk 'duplicate' %}">{% csrf_token %}<button class="dropdown-item"><i class="bi bi-copy"></i> Duplicate page</button></form></li>
+        <li><form method="post" action="{% url 'website:builder_page_action' page.pk 'delete' %}" onsubmit="return confirm('Delete this page and all its sections?')">{% csrf_token %}<button class="dropdown-item text-danger"><i class="bi bi-trash"></i> Delete page</button></form></li>
+      </ul></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8" id="sections">
+    {% for s in sections %}
+    <div class="card mb-2 {% if not s.is_visible %}opacity-50{% endif %}"><div class="card-body d-flex align-items-center gap-3 py-2">
+      <div class="d-flex flex-column">
+        <form method="post" action="{% url 'website:builder_section_action' s.pk 'up' %}">{% csrf_token %}<button class="btn btn-sm btn-link p-0" {% if forloop.first %}disabled{% endif %} title="Move up"><i class="bi bi-chevron-up"></i></button></form>
+        <form method="post" action="{% url 'website:builder_section_action' s.pk 'down' %}">{% csrf_token %}<button class="btn btn-sm btn-link p-0" {% if forloop.last %}disabled{% endif %} title="Move down"><i class="bi bi-chevron-down"></i></button></form>
+      </div>
+      <div class="flex-grow-1" style="min-width:0">
+        <div class="small text-uppercase text-body-secondary">{{ s.get_kind_display }}{% if not s.is_visible %} · hidden{% endif %}</div>
+        <a href="{% url 'website:builder_section' s.pk %}" class="fw-semibold text-truncate d-block">{{ s.title|default:"(no title)" }}</a>
+        {% if s.subtitle or s.body %}<div class="small text-body-secondary text-truncate">{{ s.subtitle|default:s.body|truncatechars:110 }}</div>{% endif %}
+      </div>
+      <div class="d-flex gap-1 flex-shrink-0">
+        <a href="{% url 'website:builder_section' s.pk %}" class="btn btn-sm btn-outline-primary text-nowrap"><i class="bi bi-pencil"></i> Edit</a>
+        <form method="post" action="{% url 'website:builder_section_action' s.pk 'toggle' %}">{% csrf_token %}<button class="btn btn-sm btn-light" title="{% if s.is_visible %}Hide{% else %}Show{% endif %}"><i class="bi {% if s.is_visible %}bi-eye-slash{% else %}bi-eye{% endif %}"></i></button></form>
+        <form method="post" action="{% url 'website:builder_section_action' s.pk 'duplicate' %}">{% csrf_token %}<button class="btn btn-sm btn-light" title="Duplicate"><i class="bi bi-copy"></i></button></form>
+        <form method="post" action="{% url 'website:builder_section_action' s.pk 'delete' %}" onsubmit="return confirm('Remove this section?')">{% csrf_token %}<button class="btn btn-sm btn-light text-danger" title="Delete"><i class="bi bi-trash"></i></button></form>
+      </div>
+    </div></div>
+    {% empty %}
+    <div class="card card-body text-body-secondary mb-2">This page is empty. Add your first section below.</div>
+    {% endfor %}
+
+    <div class="card mt-3"><div class="card-header">Add a section</div><div class="card-body">
+      <div class="row g-2">
+        {% for value, label in kinds %}
+        <div class="col-6 col-md-4">
+          <form method="post" action="{% url 'website:builder_section_add' page.pk %}" class="h-100">{% csrf_token %}
+            <input type="hidden" name="kind" value="{{ value }}">
+            <button class="btn btn-outline-secondary w-100 h-100 text-start small"><i class="bi bi-plus-circle"></i> {{ label }}</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    </div></div>
+  </div>
+  <div class="col-xl-4">
+    <div class="card"><div class="card-header">Page settings</div><div class="card-body">
+      <form method="post">{% csrf_token %}
+        <div class="row g-2">
+          {% for field in form.visible_fields %}{% include "partials/field.html" with field=field col="col-12" %}{% endfor %}
+        </div>
+        <button class="btn btn-primary w-100 mt-3">Save settings</button>
+      </form>
+      <div class="small text-body-secondary mt-3">Address: <code>{% if page.is_home %}/{% else %}/p/{{ page.slug }}/{% endif %}</code></div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

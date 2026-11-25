@@ -1,0 +1,17 @@
+<div class="container" id="contact" style="max-width: 860px">
+  {% include "website/sections/_heading.html" with center=True %}
+  <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-4">
+    <form method="post" action="{% url 'website:contact' %}">{% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <div class="row g-3">
+        {% include "partials/field.html" with field=contact_form.name %}
+        {% include "partials/field.html" with field=contact_form.subject %}
+        {% include "partials/field.html" with field=contact_form.email %}
+        {% include "partials/field.html" with field=contact_form.phone %}
+        {% include "partials/field.html" with field=contact_form.message col="col-12" %}
+      </div>
+      <div style="position:absolute;left:-9999px" aria-hidden="true">{{ contact_form.website }}</div>
+      <button class="btn btn-brand mt-3">Send message</button>
+    </form>
+  </div></div>
+</div>

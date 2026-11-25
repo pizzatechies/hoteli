@@ -41,6 +41,15 @@ def kes(value):
     return f"KES {money(value)}"
 
 
+HEX_RE = __import__("re").compile(r"^#[0-9a-fA-F]{6}$")
+
+
+@register.filter
+def hexcolor(value, fallback="#0f766e"):
+    """Only ever emit a valid #rrggbb into CSS."""
+    return value if isinstance(value, str) and HEX_RE.match(value) else fallback
+
+
 @register.filter
 def badge(status):
     return BADGES.get(str(status), "secondary")

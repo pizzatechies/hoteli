@@ -45,7 +45,16 @@ A complete hotel management system for Kenyan hotels, built with Django. It cove
 - Home, rooms and room details, dining menu (from the POS), facilities, and a contact form that feeds a staff inbox
 - Availability search with seasonal pricing, then guest details, then an M-Pesa deposit, then instant confirmation by email
 - "Manage my booking" look-up (reference plus phone or email), where guests can view the booking and pay the balance
-- WhatsApp button and editable homepage content, mobile friendly
+- WhatsApp button, mobile friendly
+
+**Website builder** (Staff → Website builder, for managers)
+- Build pages from ready-made sections: hero banner with booking search, text, image and text, rooms and rates, facilities, menu highlights, photo gallery, icon features, guest reviews, FAQ, call to action, map and contact form
+- Start a page from a template (Homepage, About us, Events & conferences, Contact & location) or from a blank page
+- Add, edit, reorder, duplicate, hide and delete sections, with a live preview next to the editor
+- Draft and publish, preview drafts privately, and choose which pages appear in the menu and in what order
+- Use any builder page as the **homepage**. If none is set, the built-in homepage is used.
+- Theme: primary, accent and dark colours, heading font, logo and footer text, applied across the whole website
+- Safe by design: text is escaped, links are restricted to http(s), relative, mailto and tel, colours are validated, and map embeds must come from Google Maps
 
 ## Quick start
 
@@ -77,7 +86,7 @@ python manage.py seed_demo
 python manage.py runserver
 ```
 
-- Website: http://localhost:8000/
+- Website: http://localhost:8000/ (the demo homepage and *Events* page are built with the website builder)
 - Staff area: http://localhost:8000/staff/
 
 `seed_demo` creates these logins, all with the password `demo12345`: `admin`, `manager`, `reception`, `accounts`, `housekeeping` and `restaurant`. **Change or delete them before going live.**
@@ -209,7 +218,7 @@ bookings/      guests, bookings, folio (charges and payments), booking engine (s
 mpesa/         Daraja client, STK push, callbacks, C2B, reconciliation
 housekeeping/  cleaning tasks and maintenance
 pos/           restaurant and bar menu and orders
-website/       public website and online booking
+website/       public website, online booking and the website builder (builder.py)
 templates/     HTML templates (Bootstrap 5)
 static/        CSS and JS (live M-Pesa status widget, booking form)
 ```
