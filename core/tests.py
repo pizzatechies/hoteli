@@ -214,3 +214,9 @@ class StaticDemoExportTests(TestCase):
             data = json.loads(manifest.split("=", 1)[1].strip().rstrip(";"))
             self.assertIn("/staff/bookings/", data["pages"])
             self.assertEqual(data["base"], "/hoteli/")
+
+
+class LoginScreenTests(HotelTestCase):
+    def test_login_shows_powered_by_pizza_technologies(self):
+        resp = self.client.get(reverse("accounts:login"))
+        self.assertContains(resp, 'Powered by <strong class="text-white">Pizza Technologies</strong>', html=False)
