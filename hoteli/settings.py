@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     "housekeeping",
     "pos",
     "website",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -213,6 +214,14 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 # The display name is replaced by the hotel name (from Settings) when emailing guests.
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@hoteli.local")
+
+# --------------------------------------------------------------------------------------
+# SMS (console = log only; africastalking = Africa's Talking)
+# --------------------------------------------------------------------------------------
+SMS_BACKEND = env("SMS_BACKEND", "console").lower()
+SMS_USERNAME = env("SMS_USERNAME", "sandbox")
+SMS_API_KEY = env("SMS_API_KEY", "")
+SMS_SENDER_ID = env("SMS_SENDER_ID", "")
 
 # --------------------------------------------------------------------------------------
 # M-Pesa (Safaricom Daraja)

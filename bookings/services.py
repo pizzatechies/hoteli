@@ -148,7 +148,7 @@ def create_booking(*, guest, room, check_in, check_out, adults=1, children=0, ra
                    f"Booked {booking.reference} for {guest} in room {room.number} "
                    f"{check_in:%d %b}–{check_out:%d %b}")
     if status == Booking.Status.CONFIRMED:
-        transaction.on_commit(lambda: send_booking_confirmation(booking))
+        transaction.on_commit(lambda: notify_booking_confirmed(booking))
     return booking
 
 
@@ -241,6 +241,10 @@ def check_in(booking, user=None, override_dirty=False):
         booking.expires_at = None
         booking.save()
         log_action(user, "booking.check_in", booking, f"Checked in {guest} to room {room.number} ({booking.reference})")
+        from notifications import sms
+
+        checked_in = booking
+        transaction.on_commit(lambda: sms.checked_in(checked_in))
     return booking
 
 
@@ -457,6 +461,10 @@ def record_payment(*, amount, method, booking=None, order=None, reference="", pa
             payer_phone=payer_phone[:20], notes=notes[:255], received_by=user, kind=kind,
         )
         target = booking.reference if booking else order.number
+        if booking is not None and kind == Payment.Kind.PAYMENT:
+            from notifications import sms
+
+            transaction.on_commit(lambda: sms.payment_received(Payment.objects.select_related("booking").get(pk=payment.pk)))
         log_action(user, f"payment.{kind.lower()}", payment,
                    f"{payment.get_kind_display()} {payment.receipt_number} {payment.get_method_display()} "
                    f"{amount:,.2f} on {target}")
@@ -478,7 +486,7 @@ def on_booking_payment(booking):
         booking.expires_at = None
         booking.save(update_fields=["status", "expires_at", "updated_at"])
         log_action(None, "booking.confirm", booking, f"{booking.reference} confirmed after deposit of {paid:,.2f}")
-        transaction.on_commit(lambda: send_booking_confirmation(booking))
+        transaction.on_commit(lambda: notify_booking_confirmed(booking))
     elif (booking.status == Booking.Status.CANCELLED and booking.cancellation_reason == EXPIRED_HOLD_REASON
           and paid > 0):
         _reinstate_expired_booking(booking, paid)
@@ -506,7 +514,7 @@ def _reinstate_expired_booking(booking, paid):
     booking.save()
     log_action(None, "booking.reinstate", booking, f"Reinstated {booking.reference} in room {room.number}")
     if booking.status == Booking.Status.CONFIRMED:
-        transaction.on_commit(lambda: send_booking_confirmation(booking))
+        transaction.on_commit(lambda: notify_booking_confirmed(booking))
 
 
 def void_payment(payment, user=None, reason=""):
@@ -557,6 +565,16 @@ def find_or_create_guest(*, first_name, last_name, phone, email="", **extra):
             match.save(update_fields=["email", "updated_at"])
         return match
     return Guest.objects.create(first_name=first_name, last_name=last_name, phone=phone, email=email, **extra)
+
+
+def notify_booking_confirmed(booking):
+    """Email and SMS the guest that their booking is confirmed."""
+    send_booking_confirmation(booking)
+    booking.refresh_from_db()
+    if booking.status == Booking.Status.CONFIRMED:
+        from notifications import sms
+
+        sms.booking_confirmed(booking)
 
 
 def send_booking_confirmation(booking):

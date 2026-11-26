@@ -16,6 +16,7 @@ urlpatterns = [
     path("staff/rooms/", include("rooms.urls")),
     path("staff/housekeeping/", include("housekeeping.urls")),
     path("staff/pos/", include("pos.urls")),
+    path("staff/sms/", include("notifications.urls")),
     path("", include("mpesa.urls")),
     path("", include("website.urls")),
 ]

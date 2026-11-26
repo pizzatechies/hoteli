@@ -273,7 +273,7 @@ def booking_confirm(request, pk):
         booking.expires_at = None
         booking.save(update_fields=["status", "expires_at", "updated_at"])
         log_action(request.user, "booking.confirm", booking, f"Manually confirmed {booking.reference}")
-        transaction.on_commit(lambda: services.send_booking_confirmation(booking))
+        transaction.on_commit(lambda: services.notify_booking_confirmed(booking))
         messages.success(request, "Booking confirmed.")
     return redirect("bookings:detail", pk=pk)
 

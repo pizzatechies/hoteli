@@ -211,6 +211,15 @@
       </div>
     </div>
     {% endif %}
+    {% if can_front_desk %}
+    <div class="card mb-3"><div class="card-header d-flex justify-content-between"><span><i class="bi bi-chat-dots"></i> SMS the guest</span><a href="{% url 'notifications:list' %}?q={{ booking.reference }}" class="small fw-normal">History</a></div><div class="card-body">
+      <form method="post" action="{% url 'notifications:send' %}">{% csrf_token %}
+        <input type="hidden" name="booking" value="{{ booking.pk }}"><input type="hidden" name="phone" value="{{ booking.guest.phone }}">
+        <textarea name="body" class="form-control mb-2" rows="3" maxlength="480" required placeholder="e.g. Your room is ready – welcome to {{ hotel.name }}!"></textarea>
+        <button class="btn btn-outline-primary btn-sm w-100">Send to {{ booking.guest.phone }}</button>
+      </form>
+    </div></div>
+    {% endif %}
     <div class="card"><div class="card-body small text-body-secondary">
       <div><i class="bi bi-info-circle"></i> Guest self-service link (share by SMS/WhatsApp so they can pay online):</div>
       <input class="form-control form-control-sm mt-2" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'website:booking' booking.public_token %}" onclick="this.select()">

@@ -61,6 +61,9 @@ class HotelSettings(models.Model):
         default=False,
         help_text="Let front desk check guests out with an unpaid balance (managers can always override).",
     )
+    sms_booking_confirmation = models.BooleanField("SMS: booking confirmations", default=True)
+    sms_payment_receipt = models.BooleanField("SMS: payment receipts", default=True)
+    sms_checkin_welcome = models.BooleanField("SMS: check-in welcome", default=True)
     require_two_factor_for_managers = models.BooleanField(
         "Require two-step login for managers and admins", default=False,
         help_text="Managers and administrators must set up an authenticator app before using the system.",

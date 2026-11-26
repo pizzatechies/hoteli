@@ -37,6 +37,7 @@
       <a href="{% url 'bookings:tape_chart' %}" class="{% if '/calendar/' in path %}active{% endif %}"><i class="bi bi-calendar3"></i> Room calendar</a>
       <a href="{% url 'bookings:list' %}" class="{% if '/bookings/' in path %}active{% endif %}"><i class="bi bi-journal-bookmark"></i> Bookings</a>
       <a href="{% url 'bookings:guest_list' %}" class="{% if '/guests/' in path %}active{% endif %}"><i class="bi bi-people"></i> Guests</a>
+      <a href="{% url 'notifications:list' %}" class="{% if '/staff/sms/' in path %}active{% endif %}"><i class="bi bi-chat-dots"></i> SMS messages</a>
       {% endif %}
       {% if nav.bookings or nav.housekeeping %}
       <a href="{% url 'rooms:list' %}" class="{% if path == '/staff/rooms/' %}active{% endif %}"><i class="bi bi-door-open"></i> Rooms</a>
