@@ -266,3 +266,15 @@ class StaffAppTests(HotelTestCase):
         self.assertContains(self.client.get("/staff/offline/"), "You're offline", html=False)
         self.login(self.reception)
         self.assertContains(self.client.get("/staff/"), 'rel="manifest"')
+
+
+class SafeRedirectTests(HotelTestCase):
+    def test_next_parameter_cannot_leave_the_site(self):
+        from rooms.models import Room
+
+        self.login(self.hk)
+        url = reverse("housekeeping:room_status", args=[self.r101.pk])
+        resp = self.client.post(url, {"status": Room.HKStatus.DIRTY, "next": "https://evil.example/phish"})
+        self.assertRedirects(resp, reverse("housekeeping:board"), fetch_redirect_response=False)
+        resp = self.client.post(url, {"status": Room.HKStatus.CLEAN, "next": "/staff/housekeeping/?status=dirty"})
+        self.assertEqual(resp["Location"], "/staff/housekeeping/?status=dirty")

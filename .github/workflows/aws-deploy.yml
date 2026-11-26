@@ -83,6 +83,7 @@ jobs:
           MPESA_SHORTCODE: ${{ vars.MPESA_SHORTCODE }}
           MPESA_TRANSACTION_TYPE: ${{ vars.MPESA_TRANSACTION_TYPE }}
           MPESA_TILL_NUMBER: ${{ vars.MPESA_TILL_NUMBER }}
+          MPESA_B2C_SHORTCODE: ${{ vars.MPESA_B2C_SHORTCODE }}
           EMAIL_HOST: ${{ vars.EMAIL_HOST }}
           DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
           SMS_BACKEND: ${{ vars.SMS_BACKEND }}
@@ -98,6 +99,7 @@ jobs:
           add MpesaShortcode "$MPESA_SHORTCODE"
           add MpesaTransactionType "$MPESA_TRANSACTION_TYPE"
           add MpesaTillNumber "$MPESA_TILL_NUMBER"
+          add MpesaB2CShortcode "$MPESA_B2C_SHORTCODE"
           add EmailHost "$EMAIL_HOST"
           add DefaultFromEmail "$DEFAULT_FROM_EMAIL"
           add SmsBackend "$SMS_BACKEND"

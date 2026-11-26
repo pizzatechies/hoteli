@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 
 from accounts import permissions as P
 from accounts.permissions import role_required
+from core.redirects import redirect_back
 from bookings.models import Booking
 from core.models import log_action
 from rooms.models import Room
@@ -56,7 +57,7 @@ def room_status(request, pk):
     if status in Room.HKStatus.values:
         services.set_room_status(room, status, request.user)
         messages.success(request, f"Room {room.number} marked {room.get_hk_status_display().lower()}.")
-    return redirect(request.POST.get("next") or "housekeeping:board")
+    return redirect_back(request, "housekeeping:board")
 
 
 @role_required(*P.HOUSEKEEPING)
@@ -111,7 +112,7 @@ def task_action(request, pk, action):
         task.assigned_to = request.user
         task.save(update_fields=["assigned_to"])
         messages.success(request, "Task assigned to you.")
-    return redirect(request.POST.get("next") or "housekeeping:tasks")
+    return redirect_back(request, "housekeeping:tasks")
 
 
 @role_required(*P.HOUSEKEEPING)

@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 
 from accounts import permissions as P
 from accounts.permissions import role_required
+from core.redirects import redirect_back
 from core.models import log_action
 
 from . import services
@@ -69,7 +70,7 @@ def receive(request, pk):
         messages.success(request, f"Received {d['quantity']:g} {item.unit} of {item.name}.")
     else:
         messages.error(request, "Enter the quantity and cost per unit.")
-    return redirect(request.POST.get("next") or "inventory:list")
+    return redirect_back(request, "inventory:list")
 
 
 @role_required(*STOCK_ROLES)
@@ -88,4 +89,4 @@ def adjust(request, pk):
         messages.success(request, f"{item.name}: now {item.quantity:g} {item.unit}.")
     else:
         messages.error(request, "Enter a quantity.")
-    return redirect(request.POST.get("next") or "inventory:list")
+    return redirect_back(request, "inventory:list")

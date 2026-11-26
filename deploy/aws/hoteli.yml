@@ -14,7 +14,7 @@ Metadata:
       - Label: { default: Custom domain (optional) }
         Parameters: [CustomDomain, CertificateArn]
       - Label: { default: M-Pesa }
-        Parameters: [MpesaEnvironment, MpesaShortcode, MpesaTransactionType, MpesaTillNumber, MpesaC2BShortcode]
+        Parameters: [MpesaEnvironment, MpesaShortcode, MpesaTransactionType, MpesaTillNumber, MpesaC2BShortcode, MpesaB2CShortcode]
       - Label: { default: Email and SMS }
         Parameters: [EmailHost, EmailPort, DefaultFromEmail, SmsBackend, SmsUsername, SmsSenderId]
 
@@ -88,6 +88,10 @@ Parameters:
   MpesaC2BShortcode:
     Type: String
     Default: ""
+  MpesaB2CShortcode:
+    Type: String
+    Default: ""
+    Description: Shortcode used to send refunds to guests (B2C). Blank uses MpesaShortcode.
   EmailHost:
     Type: String
     Default: ""
@@ -493,6 +497,7 @@ Resources:
             - { Name: MPESA_TRANSACTION_TYPE, Value: !Ref MpesaTransactionType }
             - { Name: MPESA_TILL_NUMBER, Value: !Ref MpesaTillNumber }
             - { Name: MPESA_C2B_SHORTCODE, Value: !Ref MpesaC2BShortcode }
+            - { Name: MPESA_B2C_SHORTCODE, Value: !Ref MpesaB2CShortcode }
             - Name: EMAIL_BACKEND
               Value: !If [HasEmail, django.core.mail.backends.smtp.EmailBackend, django.core.mail.backends.console.EmailBackend]
             - { Name: EMAIL_HOST, Value: !Ref EmailHost }
@@ -550,6 +555,7 @@ Resources:
             - { Name: MPESA_TRANSACTION_TYPE, Value: !Ref MpesaTransactionType }
             - { Name: MPESA_TILL_NUMBER, Value: !Ref MpesaTillNumber }
             - { Name: MPESA_C2B_SHORTCODE, Value: !Ref MpesaC2BShortcode }
+            - { Name: MPESA_B2C_SHORTCODE, Value: !Ref MpesaB2CShortcode }
             - Name: EMAIL_BACKEND
               Value: !If [HasEmail, django.core.mail.backends.smtp.EmailBackend, django.core.mail.backends.console.EmailBackend]
             - { Name: EMAIL_HOST, Value: !Ref EmailHost }

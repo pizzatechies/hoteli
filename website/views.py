@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 
 from accounts import permissions as P
 from accounts.permissions import role_required
+from core.redirects import redirect_back
 from bookings import services as booking_services
 from bookings.models import Booking
 from bookings.services import BookingError
@@ -332,7 +333,7 @@ def inbox_toggle(request, pk):
     msg = get_object_or_404(ContactMessage, pk=pk)
     msg.is_read = not msg.is_read
     msg.save(update_fields=["is_read"])
-    return redirect(request.POST.get("next") or "website:inbox")
+    return redirect_back(request, "website:inbox")
 
 
 
@@ -439,7 +440,7 @@ def builder_page_action(request, pk, action):
         log_action(request.user, "website.page_delete", None, f"Deleted page {title}")
         messages.success(request, f"Page '{title}' deleted.")
         return redirect("website:builder")
-    return redirect(request.POST.get("next") or reverse("website:builder_page", args=[pk]))
+    return redirect_back(request, "website:builder_page", pk=pk)
 
 
 @role_required(*P.MANAGEMENT)

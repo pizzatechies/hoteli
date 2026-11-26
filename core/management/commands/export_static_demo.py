@@ -119,6 +119,10 @@ class Command(BaseCommand):
             yield f"/p/{page.slug}/", f"/p/{page.slug}/"
         for b in Booking.objects.exclude(status=Booking.Status.CANCELLED):
             yield f"/booking/{b.public_token}/", f"/booking/{b.public_token}/"
+        from website.models import GuestFeedback
+
+        for fb in GuestFeedback.objects.all():
+            yield f"/feedback/{fb.token}/", f"/feedback/{fb.token}/"
 
     def staff_urls(self):
         simple = [
@@ -134,6 +138,10 @@ class Command(BaseCommand):
             "/staff/password/", "/staff/rooms/new/", "/staff/rooms/types/new/", "/staff/rooms/rates/new/",
             "/staff/housekeeping/tasks/new/", "/staff/pos/menu/items/new/", "/staff/pos/menu/categories/new/",
             "/staff/users/new/", "/staff/website/facilities/new/",
+            "/staff/stock/", "/staff/stock/new/", "/staff/finance/expenses/", "/staff/finance/expenses/new/",
+            "/staff/finance/profit-and-loss/", "/staff/sms/", "/staff/channels/", "/staff/channels/new/",
+            "/staff/feedback/", "/staff/mpesa/refunds/", "/staff/security/", "/staff/rooms/promos/new/",
+            "/staff/rooms/long-stay/new/", "/staff/rooms/companies/new/",
         ]
         for path in simple:
             yield path, path
@@ -171,6 +179,15 @@ class Command(BaseCommand):
                 yield f"/staff/website/builder/sections/{section.pk}/", f"/staff/website/builder/sections/{section.pk}/"
             if not page.is_published or page.is_home:
                 yield f"/p/{page.slug}/", f"/p/{page.slug}/?preview=1"
+        from finance.models import Expense
+        from inventory.models import StockItem
+        from rooms.models import CorporateAccount, PromoCode, StayDiscount
+
+        for model, pattern in [(StockItem, "/staff/stock/{}/"), (StockItem, "/staff/stock/{}/edit/"),
+                               (Expense, "/staff/finance/expenses/{}/"), (PromoCode, "/staff/rooms/promos/{}/"),
+                               (StayDiscount, "/staff/rooms/long-stay/{}/"), (CorporateAccount, "/staff/rooms/companies/{}/")]:
+            for pk in model.objects.values_list("pk", flat=True):
+                yield pattern.format(pk), pattern.format(pk)
         for m in MaintenanceRequest.objects.all():
             yield f"/staff/housekeeping/maintenance/{m.pk}/", f"/staff/housekeeping/maintenance/{m.pk}/"
 

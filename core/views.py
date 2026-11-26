@@ -20,6 +20,7 @@ from mpesa.models import C2BTransaction, MpesaTransaction
 from rooms.models import Room
 
 from . import reports
+from .redirects import redirect_back
 from .branding import read_logo
 from .forms import DateRangeForm, HotelIdentityForm, HotelSettingsForm, LogoUploadForm
 from .models import AuditLog, BrandAsset, HotelSettings, log_action
@@ -117,7 +118,7 @@ def run_night_audit(request):
         f"Night audit for {run.business_date:%d %b %Y} complete: room charges posted to date "
         f"{run.room_charges_posted}, no-shows {run.no_shows}, expired holds released {run.expired_holds}.",
     )
-    return redirect(request.POST.get("next") or "core:dashboard")
+    return redirect_back(request, "core:dashboard")
 
 
 def _report_range(request):

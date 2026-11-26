@@ -28,7 +28,7 @@ A complete hotel management system for Kenyan hotels, built with Django. It cove
 
 **Front office**
 - Front desk board: today's arrivals, departures, overdue departures, in-house guests and balances
-- Room calendar (tape chart): click an empty cell to book that room and date
+- Room calendar (tape chart): click an empty cell to book that room and date. Rooms blocked by Booking.com, Airbnb or the owner show in grey.
 - Reservations with live room availability, guest look-up, seasonal rates, rate overrides and booking sources (walk-in, phone, OTA, corporate…)
 - Double-booking protection with row locks. Back-to-back stays are allowed.
 - Check-in rules: ID/passport required, blacklisted guests blocked, dirty or out-of-order rooms blocked (manager override), late arrivals handled
@@ -39,6 +39,7 @@ A complete hotel management system for Kenyan hotels, built with Django. It cove
 **Billing**
 - Guest folio: room nights, food, laundry, minibar and other charges; discounts; voids with an audit trail
 - Payments by cash, M-Pesa, card, bank or cheque, plus refunds, receipts and a printable invoice with a VAT 16% and catering levy 2% breakdown
+- Promo codes (percentage or fixed amount, dates, minimum nights, usage limits), long-stay discounts (e.g. 10% off 7+ nights) and corporate rates for companies. The guest always gets the single best discount, and it is shown on the booking and invoice.
 - Night audit posts nightly room charges, marks no-shows, releases expired online holds and extends overstays
 
 **M-Pesa (Safaricom Daraja)**
@@ -46,6 +47,7 @@ A complete hotel management system for Kenyan hotels, built with Django. It cove
 - A live status widget that polls until the payment succeeds, is cancelled, times out or fails, with a clear reason for each result (wrong PIN, insufficient funds and so on)
 - If the callback never arrives, the system falls back to Daraja's STK query API. A late success callback is still honoured after a timeout.
 - Duplicate callbacks are ignored, and the same M-Pesa receipt can never be recorded twice
+- **Refunds straight to the guest's phone** (B2C) from the folio, limited to what the guest actually paid, with a refunds screen and the result posted to the folio automatically
 - Paybill (C2B) payments are matched automatically when the guest enters the booking reference as the account number. Unmatched payments wait in a queue for manual allocation.
 - A raw log of every callback for reconciliation, and a resend cooldown with per-phone throttling
 - A **simulation mode** that demos the whole flow without credentials
@@ -54,12 +56,24 @@ A complete hotel management system for Kenyan hotels, built with Django. It cove
 - Housekeeping board, cleaning tasks (created automatically at check-out, urgent if an arrival is due) and room status updates
 - Maintenance requests that can take a room out of order and warn about affected bookings
 - Restaurant and bar POS: menu, orders, charge to room (split into food and beverage) or pay by cash, card or M-Pesa; printable bills
+- Stock: drinks, food and supplies with reorder levels. Linking a menu item to a stock item deducts it when the order is paid or charged to a room, and puts it back if the order is cancelled. Receive deliveries (optionally recorded as an expense), count stock and see every movement.
+- **Channel sync** with Booking.com, Airbnb, Expedia and any site that uses iCal calendars: their reservations block our rooms, and our bookings block theirs. Syncs every 30 minutes, warns about double bookings, and lets you block dates manually for owner stays.
+- Text messages (Africa's Talking): booking confirmation, payment receipt and check-in welcome, each switchable, with automatic retries and a log of every message
+- Staff app: install the staff area on a phone's home screen (Add to Home Screen), with an offline page when the connection drops
 
 **Management**
-- Dashboard with occupancy, collections, a 14-day revenue chart and an occupancy forecast
+- Dashboard with occupancy, collections, a 14-day revenue chart, an occupancy forecast and double-booking warnings
+- Expenses by category and supplier, and a profit & loss statement (revenue by category against expenses) for any period
+- A daily summary email each morning: yesterday's occupancy, revenue, collections, expenses, today's arrivals and departures, low stock and unread messages
+- Guest feedback: after check-out the guest gets a link to rate their stay. Managers read every response and choose which to publish on the website as reviews.
 - Reports: occupancy, ADR, RevPAR, revenue by category, collections by method, receivables, guest credits and M-Pesa totals, with CSV export
 - Staff accounts with roles: Admin, Manager, Front Desk, Accountant, Housekeeping, Restaurant
 - Audit log of every important action, and hotel settings (taxes, deposit %, hold time, policies)
+
+**Security**
+- Two-step login with an authenticator app (Google Authenticator, Microsoft Authenticator, Authy) and one-time recovery codes. Managers can make it compulsory for managers and administrators.
+- Accounts lock for 15 minutes after 5 wrong passwords, and staff are signed out after 4 hours without activity
+- Role-based access, CSRF protection, HTTPS redirect and secure, http-only cookies in production (turn on HSTS with `SECURE_HSTS_SECONDS` once your domain is final)
 
 **Public website**
 - Home, rooms and room details, dining menu (from the POS), facilities, and a contact form that feeds a staff inbox
@@ -164,13 +178,24 @@ python manage.py mpesa_simulate_c2b HBXXXXXX 100
 
 Payments with an unknown account number appear under **M-Pesa → Paybill (C2B)**, where you can allocate them.
 
-### 3. Going live
+### 3. Refunds to the guest's phone (B2C), optional
+
+Refunds are sent with Daraja's B2C API. In simulation mode refunds are simulated. With real keys but no B2C settings, the **Send refund to M-Pesa** option stays hidden and refunds are recorded by hand as before.
+
+1. In the Daraja portal, add the B2C product to your app and note the initiator name (`testapi` in the sandbox).
+2. Generate the **security credential** in the portal (it encrypts the initiator password with Safaricom's certificate).
+3. Set `MPESA_B2C_INITIATOR_NAME` and `MPESA_B2C_SECURITY_CREDENTIAL`, and `MPESA_B2C_SHORTCODE` if refunds go out from a different shortcode than payments come in.
+
+A refund can never exceed what the guest paid on that booking, less earlier refunds. Results arrive by callback and post to the folio automatically; **M-Pesa → Refunds** lists every request with its status. In production, Safaricom must enable B2C on the shortcode, and its utility account must hold enough money for the refund.
+
+### 4. Going live
 
 1. Complete Safaricom's *Go Live* process for your Paybill or Till to get production keys and the **production passkey**.
 2. Set `MPESA_ENVIRONMENT=production` and your real `MPESA_SHORTCODE`, `MPESA_PASSKEY`, `MPESA_CONSUMER_KEY` and `MPESA_CONSUMER_SECRET`.
 3. **Till numbers (Buy Goods):** set `MPESA_TRANSACTION_TYPE=CustomerBuyGoodsOnline`. Set `MPESA_SHORTCODE` to the store or head-office number and `MPESA_TILL_NUMBER` to the till.
 4. Set `MPESA_CALLBACK_BASE_URL` to your HTTPS domain and use a long random `MPESA_CALLBACK_TOKEN`. **Settings → M-Pesa** shows the exact URLs and warns about common mistakes.
 5. If you use Paybill payments, run `mpesa_register_c2b` again against production.
+6. For refunds, use your production initiator name and security credential.
 
 > ⚠️ While simulation mode is on, anyone can "pay" with the simulate buttons. Never run a real hotel in simulation mode. Setting the consumer key and secret turns it off; you can also force it off with `MPESA_SIMULATE=False`.
 
@@ -202,6 +227,9 @@ python manage.py run_jobs
 | Night audit | Daily at `NIGHT_AUDIT_TIME` (default 23:30) | Posts room charges, marks no-shows and extends overstays |
 | Expire holds | Every 5 minutes | Releases unpaid online bookings |
 | M-Pesa check | Every 2 minutes | Resolves STK pushes whose callback was missed |
+| SMS retry | Every 2 minutes | Resends text messages that failed because of a network or provider error |
+| Calendar sync | Every 30 minutes | Imports reservations from Booking.com, Airbnb and other connected calendars |
+| Daily report | Daily at `DAILY_REPORT_TIME` (default 07:00) | Emails yesterday's summary to the addresses in Hotel settings |
 
 Every job is safe to run twice, and daily jobs are recorded so they run once a day even with several workers. The system also does these tasks on demand when people use it, and managers can run the night audit from the dashboard.
 
@@ -231,7 +259,7 @@ CloudWatch Logs: 30 days
 5. **Sign in.** Use username `admin`. The password is in Secrets Manager under `hoteli/prod/admin-password`; the run summary links to it. Change it after your first login.
 6. **Add your keys.** In Secrets Manager, edit `hoteli/prod/integrations` and fill in your M-Pesa (Daraja), email (SMTP) and SMS keys. Then run the workflow again with **Only restart the app** ticked. M-Pesa stays in simulation mode until real keys are added.
 
-**Optional repository variables:** `HOTELI_CUSTOM_DOMAIN` + `HOTELI_CERTIFICATE_ARN` (an ACM certificate in us-east-1; point the domain's CNAME at the *CloudFrontDomain* output), `MPESA_ENVIRONMENT` (`production` when going live), `MPESA_SHORTCODE`, `MPESA_TRANSACTION_TYPE`, `MPESA_TILL_NUMBER`, `EMAIL_HOST` (e.g. `email-smtp.eu-west-1.amazonaws.com` for Amazon SES), `DEFAULT_FROM_EMAIL`, `SMS_BACKEND` (`africastalking`), `SMS_USERNAME`, `SMS_SENDER_ID`, `HOTELI_DESIRED_COUNT`.
+**Optional repository variables:** `HOTELI_CUSTOM_DOMAIN` + `HOTELI_CERTIFICATE_ARN` (an ACM certificate in us-east-1; point the domain's CNAME at the *CloudFrontDomain* output), `MPESA_ENVIRONMENT` (`production` when going live), `MPESA_SHORTCODE`, `MPESA_TRANSACTION_TYPE`, `MPESA_TILL_NUMBER`, `MPESA_B2C_SHORTCODE` (for refunds), `EMAIL_HOST` (e.g. `email-smtp.eu-west-1.amazonaws.com` for Amazon SES), `DEFAULT_FROM_EMAIL`, `SMS_BACKEND` (`africastalking`), `SMS_USERNAME`, `SMS_SENDER_ID`, `HOTELI_DESIRED_COUNT`.
 
 **Safety built in:** the database has deletion protection and takes a final snapshot if it is ever removed. Deploys roll back automatically if the new version fails its health checks. Containers can't be reached except through CloudFront.
 
