@@ -312,3 +312,61 @@ def permission_denied(request, exception=None):
 
 def page_not_found(request, exception=None):
     return render(request, "404.html", status=404)
+
+
+# ------------------------------------------------------------------------------ installable staff app (PWA)
+def staff_manifest(request):
+    import json
+
+    from django.templatetags.static import static
+
+    hotel = HotelSettings.load()
+    data = {
+        "name": f"{hotel.name} · Staff",
+        "short_name": "Hoteli",
+        "description": "Front desk, housekeeping, restaurant and reports",
+        "start_url": "/staff/",
+        "scope": "/staff/",
+        "display": "standalone",
+        "background_color": "#0f172a",
+        "theme_color": "#0f766e",
+        "icons": [
+            {"src": static("brand/icon-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": static("brand/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+        ],
+        "shortcuts": [
+            {"name": "Front desk", "url": "/staff/frontdesk/"},
+            {"name": "Housekeeping", "url": "/staff/housekeeping/"},
+            {"name": "Restaurant & bar", "url": "/staff/pos/"},
+        ],
+    }
+    return HttpResponse(json.dumps(data), content_type="application/manifest+json")
+
+
+SERVICE_WORKER = """
+// Hoteli staff app: offline fallback only. Pages with guest data are never cached.
+const CACHE = "hoteli-staff-v1";
+const OFFLINE = "/staff/offline/";
+self.addEventListener("install", (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE])).then(() => self.skipWaiting()));
+});
+self.addEventListener("activate", (e) => {
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    .then(() => self.clients.claim()));
+});
+self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET" || e.request.mode !== "navigate") return;
+  e.respondWith(fetch(e.request).catch(() => caches.match(OFFLINE)));
+});
+"""
+
+
+def staff_service_worker(request):
+    response = HttpResponse(SERVICE_WORKER, content_type="application/javascript")
+    response["Service-Worker-Allowed"] = "/staff/"
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+def staff_offline(request):
+    return render(request, "core/offline.html")

@@ -35,4 +35,4 @@ class MenuCategoryForm(BootstrapMixin, forms.ModelForm):
 class MenuItemForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = MenuItem
-        fields = ["category", "name", "description", "kind", "price", "is_available"]
+        fields = ["category", "name", "description", "kind", "price", "is_available", "stock_item", "stock_quantity"]

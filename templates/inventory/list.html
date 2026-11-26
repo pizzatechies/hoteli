@@ -1,0 +1,38 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Stock{% endblock %}
+{% block page_title %}Stock{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+    <a href="?" class="btn btn-sm {% if not area and not low_only %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+    {% for v, l in areas %}<a href="?area={{ v }}" class="btn btn-sm {% if area == v %}btn-primary{% else %}btn-outline-primary{% endif %}">{{ l }}</a>{% endfor %}
+    <a href="?low=1" class="btn btn-sm {% if low_only %}btn-danger{% else %}btn-outline-danger{% endif %}"><i class="bi bi-exclamation-triangle"></i> Low stock ({{ low_count }})</a>
+  </div>
+  <div class="d-flex gap-2 align-items-center"><span class="small text-body-secondary">Stock value: <strong class="money">KES {{ total_value|money:0 }}</strong></span>
+    {% if can_manage %}<a href="{% url 'inventory:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New item</a>{% endif %}</div>
+</div>
+<div class="card"><div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>Item</th><th>Area</th><th class="text-end">In stock</th><th class="text-end">Reorder at</th><th class="text-end">Unit cost</th><th class="text-end">Value</th><th style="min-width:330px">Quick update</th></tr></thead>
+  <tbody>{% for i in items %}
+  <tr class="{% if i.is_low %}table-warning{% endif %}{% if not i.is_active %} text-body-tertiary{% endif %}">
+    <td><a href="{% url 'inventory:detail' i.pk %}" class="fw-semibold">{{ i.name }}</a>{% if i.supplier %}<div class="small text-body-secondary">{{ i.supplier }}</div>{% endif %}</td>
+    <td class="small">{{ i.get_area_display }}</td>
+    <td class="text-end fw-semibold {% if i.quantity < 0 %}text-danger{% endif %}">{{ i.quantity|floatformat:"-2" }} <span class="small fw-normal text-body-secondary">{{ i.unit }}</span>{% if i.is_low %} <span class="badge text-bg-warning">Low</span>{% endif %}</td>
+    <td class="text-end small">{{ i.reorder_level|floatformat:"-2" }}</td>
+    <td class="text-end money small">{{ i.unit_cost|money }}</td>
+    <td class="text-end money">{{ i.value|money:0 }}</td>
+    <td>
+      <form method="post" action="{% url 'inventory:receive' i.pk %}" class="d-flex gap-1">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="method" value="CASH"><input type="hidden" name="record_expense" value="on">
+        <input name="quantity" type="number" step="0.01" min="0.01" class="form-control form-control-sm" placeholder="Qty in" required style="max-width:90px">
+        <input name="unit_cost" type="number" step="0.01" min="0" class="form-control form-control-sm" value="{{ i.unit_cost|floatformat:2 }}" title="Cost per unit" style="max-width:100px">
+        <button class="btn btn-sm btn-outline-success text-nowrap">+ Receive</button>
+        <a href="{% url 'inventory:detail' i.pk %}" class="btn btn-sm btn-light text-nowrap">Count / waste</a>
+      </form>
+    </td>
+  </tr>
+  {% empty %}<tr><td colspan="7" class="text-body-secondary">No stock items yet. {% if can_manage %}<a href="{% url 'inventory:create' %}">Add items</a> such as drinks, then link menu items to them so every sale deducts stock.{% endif %}</td></tr>{% endfor %}</tbody>
+</table></div></div>
+<p class="small text-body-secondary mt-2">Receiving stock also records the cost under <a href="{% url 'finance:expenses' %}">Expenses</a>. Menu items linked to stock are deducted automatically when an order is paid or charged to a room, and returned if the order is cancelled.</p>
+{% endblock %}

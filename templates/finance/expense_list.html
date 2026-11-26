@@ -1,0 +1,35 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Expenses{% endblock %}
+{% block page_title %}Expenses{% endblock %}
+{% block content %}
+<div class="card card-body mb-3"><form class="row g-2 align-items-end" method="get">
+  <div class="col-sm-3"><label class="form-label small">From</label>{{ form.start }}</div>
+  <div class="col-sm-3"><label class="form-label small">To</label>{{ form.end }}</div>
+  <div class="col-sm-3"><label class="form-label small">Category</label><select name="category" class="form-select"><option value="">All</option>{% for v, l in categories %}<option value="{{ v }}" {% if category == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+  <div class="col-sm-3 d-flex gap-2"><button class="btn btn-primary">Show</button><a href="{% url 'finance:profit_loss' %}?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}" class="btn btn-outline-secondary">Profit &amp; loss</a></div>
+</form></div>
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card"><div class="card-header d-flex justify-content-between"><span>{{ start|date:"j M" }} – {{ end|date:"j M Y" }}</span><span class="money">Total KES {{ total|money }}</span></div>
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Paid by</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>{% for e in page %}<tr onclick="location.href='{% url 'finance:expense_edit' e.pk %}'" style="cursor:pointer">
+          <td class="small text-nowrap">{{ e.date|date:"d M Y" }}</td><td>{{ e.description }}{% if e.supplier %}<div class="small text-body-secondary">{{ e.supplier }}{% if e.reference %} · {{ e.reference }}{% endif %}</div>{% endif %}</td>
+          <td class="small">{{ e.get_category_display }}</td><td class="small">{{ e.get_method_display }}</td><td class="text-end money">{{ e.amount|money }}</td></tr>
+        {% empty %}<tr><td colspan="5" class="text-body-secondary">No expenses in this period.</td></tr>{% endfor %}</tbody>
+      </table></div></div>
+    {% include "partials/pagination.html" %}
+  </div>
+  <div class="col-xl-4">
+    <div class="card mb-3"><div class="card-header">Record an expense</div><div class="card-body">
+      <form method="post" action="{% url 'finance:expense_create' %}">{% csrf_token %}
+        <div class="row g-2">{% for field in new_form.visible_fields %}{% include "partials/field.html" with field=field col="col-12" %}{% endfor %}</div>
+        <button class="btn btn-primary w-100 mt-2">Save expense</button></form>
+    </div></div>
+    <div class="card"><div class="card-header">By category</div><ul class="list-group list-group-flush">
+      {% for label, amount in by_category %}<li class="list-group-item d-flex justify-content-between small"><span>{{ label }}</span><span class="money">{{ amount|money }}</span></li>
+      {% empty %}<li class="list-group-item small text-body-secondary">Nothing yet.</li>{% endfor %}</ul></div>
+  </div>
+</div>
+{% endblock %}

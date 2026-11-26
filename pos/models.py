@@ -33,6 +33,10 @@ class MenuItem(models.Model):
     kind = models.CharField(max_length=10, choices=Kind.choices, default=Kind.FOOD)
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
     is_available = models.BooleanField(default=True)
+    stock_item = models.ForeignKey("inventory.StockItem", null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="menu_items", help_text="Deduct this stock item when sold.")
+    stock_quantity = models.DecimalField("Stock used per sale", max_digits=8, decimal_places=3, default=Decimal("1"),
+                                         validators=[MinValueValidator(Decimal("0.001"))])
 
     class Meta:
         ordering = ["category__display_order", "category__name", "name"]
@@ -65,6 +69,7 @@ class Order(models.Model):
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=ZERO,
                                    validators=[MinValueValidator(Decimal("0"))])
     notes = models.CharField(max_length=255, blank=True)
+    stock_deducted = models.BooleanField(default=False, editable=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )

@@ -251,3 +251,18 @@ class InfrastructureTests(HotelTestCase):
         from bookings.models import NightAuditRun
 
         self.assertTrue(NightAuditRun.objects.exists())
+
+
+class StaffAppTests(HotelTestCase):
+    def test_manifest_and_service_worker(self):
+        import json
+
+        data = json.loads(self.client.get("/staff/manifest.webmanifest").content)
+        self.assertEqual(data["start_url"], "/staff/")
+        self.assertEqual(data["display"], "standalone")
+        sw = self.client.get("/staff/sw.js")
+        self.assertEqual(sw["Service-Worker-Allowed"], "/staff/")
+        self.assertIn("never cached", sw.content.decode())
+        self.assertContains(self.client.get("/staff/offline/"), "You're offline", html=False)
+        self.login(self.reception)
+        self.assertContains(self.client.get("/staff/"), 'rel="manifest"')

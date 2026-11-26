@@ -1,0 +1,23 @@
+{% extends "base_staff.html" %}
+{% block title %}Guest feedback{% endblock %}
+{% block page_title %}Guest feedback{% endblock %}
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-sm-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">Average rating</div><div class="stat-value">{% if stats.avg %}{{ stats.avg|floatformat:1 }} <span class="fs-6 text-warning"><i class="bi bi-star-fill"></i></span>{% else %}–{% endif %}</div></div></div></div>
+  <div class="col-sm-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">Responses</div><div class="stat-value">{{ stats.count }}</div></div></div></div>
+  <div class="col-sm-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">Awaiting reply</div><div class="stat-value">{{ pending }}</div></div></div></div>
+</div>
+{% for f in page %}
+<div class="card mb-2"><div class="card-body d-flex justify-content-between gap-3 flex-wrap">
+  <div>
+    <div class="text-warning">{% for _ in "12345"|make_list|slice:f.rating %}<i class="bi bi-star-fill"></i>{% endfor %}<span class="text-body-secondary small ms-2">{{ f.submitted_at|date:"d M Y" }}</span></div>
+    <div class="fw-semibold mt-1">{{ f.booking.guest }} <span class="small text-body-secondary">· <a href="{% url 'bookings:detail' f.booking_id %}">{{ f.booking.reference }}</a> · room {{ f.booking.room.number }}</span></div>
+    {% if f.comment %}<p class="mb-0 mt-1">{{ f.comment|linebreaksbr }}</p>{% endif %}
+  </div>
+  {% if can_publish and f.comment %}<form method="post" action="{% url 'website:feedback_publish' f.pk %}">{% csrf_token %}
+    <button class="btn btn-sm {% if f.is_published %}btn-success{% else %}btn-outline-secondary{% endif %}">{% if f.is_published %}<i class="bi bi-check2"></i> On website{% else %}Show on website{% endif %}</button></form>{% endif %}
+</div></div>
+{% empty %}<div class="card card-body text-body-secondary">No feedback yet. Guests get a rating link by SMS and email after check-out (switch it off in Settings).</div>{% endfor %}
+{% include "partials/pagination.html" %}
+<p class="small text-body-secondary">Published reviews (4–5 stars with a comment) appear in the website builder's <em>Guest reviews</em> section, shown as first name and last initial.</p>
+{% endblock %}

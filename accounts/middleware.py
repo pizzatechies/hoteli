@@ -3,7 +3,8 @@ from django.shortcuts import redirect
 
 from . import security
 
-ALLOWED_PREFIXES = ("/staff/security/", "/staff/logout/", "/staff/login/", "/static/", "/brand/", "/healthz/")
+ALLOWED_PREFIXES = ("/staff/security/", "/staff/logout/", "/staff/login/", "/staff/manifest.webmanifest",
+                    "/staff/sw.js", "/staff/offline/", "/static/", "/brand/", "/healthz/")
 
 
 class TwoFactorEnforcementMiddleware:

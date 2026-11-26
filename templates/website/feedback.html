@@ -1,0 +1,34 @@
+{% extends "base_site.html" %}
+{% block title %}Your stay{% endblock %}
+{% block content %}
+<section class="section"><div class="container" style="max-width:560px">
+  {% if item.submitted_at %}
+    <div class="text-center py-4">
+      <div class="display-5 text-warning mb-2">{% for _ in "12345"|make_list|slice:item.rating %}<i class="bi bi-star-fill"></i>{% endfor %}</div>
+      <h1 class="h3">Asante sana, {{ item.booking.guest.first_name }}!</h1>
+      <p class="text-body-secondary">Thank you for your feedback – it helps us look after every guest better. We hope to welcome you back soon.</p>
+      <a href="{% url 'website:search' %}" class="btn btn-brand">Plan your next stay</a>
+    </div>
+  {% else %}
+    <h1 class="h3 mb-1">How was your stay, {{ item.booking.guest.first_name }}?</h1>
+    <p class="text-body-secondary">{{ item.booking.room.room_type }} · {{ item.booking.check_in_date|date:"j M" }} – {{ item.booking.check_out_date|date:"j M Y" }}</p>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <form method="post" class="card border-0 shadow-sm rounded-4"><div class="card-body p-4">{% csrf_token %}
+      <div class="star-input mb-3" role="radiogroup" aria-label="Rating">
+        {% for n in "54321"|make_list %}<input type="radio" name="rating" id="star{{ n }}" value="{{ n }}" required><label for="star{{ n }}" title="{{ n }} star{{ n|pluralize }}"><i class="bi bi-star-fill"></i></label>{% endfor %}
+      </div>
+      <label class="form-label" for="comment">Tell us more (optional)</label>
+      <textarea id="comment" name="comment" rows="4" class="form-control" maxlength="2000" placeholder="What did you enjoy? What could we do better?"></textarea>
+      <button class="btn btn-brand mt-3 w-100">Send feedback</button>
+      <div class="small text-body-secondary mt-2">We may show positive comments on our website with your first name and last initial.</div>
+    </div></form>
+  {% endif %}
+</div></section>
+<style>
+  .star-input { display: inline-flex; flex-direction: row-reverse; gap: 4px; font-size: 2.4rem; }
+  .star-input input { position: absolute; opacity: 0; width: 0; }
+  .star-input label { color: #cbd5e1; cursor: pointer; transition: color .1s; }
+  .star-input input:checked ~ label, .star-input label:hover, .star-input label:hover ~ label { color: #f59e0b; }
+  .star-input input:focus-visible + label { outline: 2px solid var(--brand); border-radius: 4px; }
+</style>
+{% endblock %}

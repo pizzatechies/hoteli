@@ -32,8 +32,7 @@ SECTION_DEFAULTS = {
         "phone | Pay with M-Pesa | Approve the prompt on your phone – done.",
         "envelope-check | Instant confirmation | Your booking is confirmed by email right away.",
     ])},
-    K.TESTIMONIALS: {"eyebrow": "Guest reviews", "title": "What our guests say", "background": "soft",
-                     "items": "Paste a genuine guest review here | Guest name | City"},
+    K.TESTIMONIALS: {"eyebrow": "Guest reviews", "title": "What our guests say", "background": "soft", "items": ""},
     K.FAQ: {"title": "Frequently asked questions", "items": "\n".join([
         "What time is check-in? | Check-in is from 2pm and check-out by 10am.",
         "How do I pay? | Pay securely with M-Pesa when you book, or at the front desk.",

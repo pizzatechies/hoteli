@@ -17,6 +17,8 @@ urlpatterns = [
     path("staff/housekeeping/", include("housekeeping.urls")),
     path("staff/pos/", include("pos.urls")),
     path("staff/sms/", include("notifications.urls")),
+    path("staff/stock/", include("inventory.urls")),
+    path("staff/finance/", include("finance.urls")),
     path("", include("mpesa.urls")),
     path("", include("channel_sync.urls")),
     path("", include("website.urls")),

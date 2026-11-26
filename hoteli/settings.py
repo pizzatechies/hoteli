@@ -80,6 +80,8 @@ INSTALLED_APPS = [
     "website",
     "notifications",
     "channel_sync",
+    "inventory",
+    "finance",
 ]
 
 MIDDLEWARE = [

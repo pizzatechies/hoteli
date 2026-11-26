@@ -1,6 +1,13 @@
 <div class="container">
   {% include "website/sections/_heading.html" with center=True %}
   <div class="row g-4 justify-content-center">
+    {% if not section.testimonials and guest_reviews %}{% for r in guest_reviews %}
+    <div class="col-md-6 col-lg-4"><div class="card quote-card"><div class="card-body p-4">
+      <div class="text-warning mb-2">{% for _ in "12345"|make_list|slice:r.rating %}<i class="bi bi-star-fill"></i>{% endfor %}</div>
+      <p class="mb-3">{{ r.comment|truncatewords:60 }}</p>
+      <div class="fw-semibold">{{ r.display_name }}</div><div class="small text-body-secondary">Stayed {{ r.booking.check_in_date|date:"F Y" }}</div>
+    </div></div></div>
+    {% endfor %}{% endif %}
     {% for t in section.testimonials %}
     <div class="col-md-6 col-lg-4"><div class="card quote-card"><div class="card-body p-4">
       <i class="bi bi-quote fs-2 text-brand"></i>

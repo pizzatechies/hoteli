@@ -28,6 +28,9 @@ urlpatterns = [
     path("staff/website/", views.manage, name="manage"),
     path("staff/website/facilities/new/", views.facility_form, name="facility_create"),
     path("staff/website/facilities/<int:pk>/", views.facility_form, name="facility_edit"),
+    path("feedback/<uuid:token>/", views.feedback, name="feedback"),
+    path("staff/feedback/", views.feedback_list, name="feedback_list"),
+    path("staff/feedback/<int:pk>/publish/", views.feedback_publish, name="feedback_publish"),
     path("staff/inbox/", views.inbox, name="inbox"),
     path("staff/inbox/<int:pk>/toggle/", views.inbox_toggle, name="inbox_toggle"),
 ]

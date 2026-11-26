@@ -231,3 +231,53 @@ class WebsiteBuilderTests(HotelTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "Frequently asked questions")
         self.assertContains(resp, "Why book direct")
+
+
+class GuestFeedbackTests(HotelTestCase):
+    def checkout(self):
+        from bookings import services as booking_services
+
+        b = self.make_booking(ci=-1, co=0, status=Booking.Status.CHECKED_IN)
+        with self.captureOnCommitCallbacks(execute=True):
+            booking_services.check_out(b, allow_balance=True)
+        return b
+
+    def test_feedback_requested_at_checkout_and_published_to_website(self):
+        from notifications.models import SmsMessage
+        from website.models import GuestFeedback
+
+        b = self.checkout()
+        fb = GuestFeedback.objects.get(booking=b)
+        self.assertTrue(SmsMessage.objects.filter(kind="FEEDBACK", body__contains=str(fb.token)).exists())
+        self.assertEqual(len(mail.outbox), 1)
+        url = reverse("website:feedback", args=[fb.token])
+        self.assertContains(self.client.get(url), "How was your stay")
+        self.assertContains(self.client.post(url, {"rating": "9"}), "1 to 5 stars")
+        self.client.post(url, {"rating": "5", "comment": "Lovely staff and great breakfast."})
+        fb.refresh_from_db()
+        self.assertEqual(fb.rating, 5)
+        self.client.post(url, {"rating": "1", "comment": "changed my mind"})  # can't overwrite
+        fb.refresh_from_db()
+        self.assertEqual(fb.rating, 5)
+        self.login(self.manager)
+        self.assertContains(self.client.get(reverse("website:feedback_list")), "great breakfast")
+        self.client.post(reverse("website:feedback_publish", args=[fb.pk]))
+        from website import builder
+
+        page = builder.create_page(title="Reviews", is_published=True)
+        builder.add_section(page, "TESTIMONIALS")
+        self.client.logout()
+        resp = self.client.get(reverse("website:page", args=[page.slug]))
+        self.assertContains(resp, "Lovely staff and great breakfast.")
+        self.assertContains(resp, "Jane D.")
+        self.assertNotContains(resp, "Jane Doe")
+
+    def test_feedback_can_be_switched_off(self):
+        from core.models import HotelSettings
+        from website.models import GuestFeedback
+
+        hotel = HotelSettings.objects.get_or_create(pk=1)[0]
+        hotel.feedback_requests = False
+        hotel.save()
+        self.checkout()
+        self.assertFalse(GuestFeedback.objects.exists())

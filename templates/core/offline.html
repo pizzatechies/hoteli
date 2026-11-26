@@ -1,0 +1,9 @@
+{% load static %}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline · Hoteli</title>
+<link rel="icon" href="{% static 'brand/favicon.svg' %}" type="image/svg+xml">
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#115e59);color:#fff;font-family:system-ui,Arial,sans-serif;text-align:center;padding:24px}
+.btn{display:inline-block;margin-top:16px;padding:10px 18px;border-radius:8px;background:#0f766e;color:#fff;text-decoration:none;border:0;font-size:16px}</style></head>
+<body><div><img src="{% static 'brand/hoteli-mark.svg' %}" alt="" width="64" height="64">
+<h1 style="font-size:22px;margin:16px 0 6px">You're offline</h1>
+<p style="opacity:.8;margin:0">Check the Wi-Fi or mobile data, then try again. Nothing you entered has been lost on the server.</p>
+<button class="btn" onclick="location.reload()">Try again</button></div></body></html>

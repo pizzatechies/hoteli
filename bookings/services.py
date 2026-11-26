@@ -332,6 +332,10 @@ def check_out(booking, user=None, allow_balance=False):
         from housekeeping.services import create_checkout_task
 
         create_checkout_task(booking.room, booking, user)
+        from website.feedback import request_feedback
+
+        departed = booking
+        transaction.on_commit(lambda: request_feedback(departed))
         msg = f"Checked out {booking.guest} from room {booking.room.number} ({booking.reference})"
         if balance > 0:
             msg += f" with outstanding balance {balance:,.2f}"

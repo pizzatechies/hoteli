@@ -61,6 +61,14 @@ class HotelSettings(models.Model):
         default=False,
         help_text="Let front desk check guests out with an unpaid balance (managers can always override).",
     )
+    report_emails = models.CharField(
+        "Daily report recipients", max_length=500, blank=True,
+        help_text="Extra comma-separated emails for the 7am daily report (managers with an email get it anyway).",
+    )
+    feedback_requests = models.BooleanField(
+        "Ask guests for feedback after check-out", default=True,
+        help_text="Sends a short rating link by SMS and email.",
+    )
     sms_booking_confirmation = models.BooleanField("SMS: booking confirmations", default=True)
     sms_payment_receipt = models.BooleanField("SMS: payment receipts", default=True)
     sms_checkin_welcome = models.BooleanField("SMS: check-in welcome", default=True)

@@ -29,7 +29,7 @@ from .forms import (
     ContactForm, FacilityForm, GuestDetailsForm, LookupForm, NewPageForm, PageForm, PayForm, SearchForm,
     SectionForm, ThemeForm, WebsiteContentForm,
 )
-from .models import ContactMessage, Facility, Page, Section, WebsiteContent
+from .models import ContactMessage, Facility, GuestFeedback, Page, Section, WebsiteContent
 
 
 def _default_dates():
@@ -360,6 +360,10 @@ def _render_page(request, page):
         )
     if Section.Kind.CONTACT in kinds:
         context["contact_form"] = ContactForm()
+    if Section.Kind.TESTIMONIALS in kinds:
+        from .feedback import published_reviews
+
+        context["guest_reviews"] = published_reviews()
     return render(request, "website/page.html", context)
 
 
@@ -483,3 +487,50 @@ def builder_section_action(request, pk, action):
         section.delete()
         messages.success(request, "Section removed.")
     return redirect(reverse("website:builder_page", args=[page_id]) + "#sections")
+
+
+# ------------------------------------------------------------------------------ guest feedback
+def feedback(request, token):
+    item = get_object_or_404(GuestFeedback.objects.select_related("booking__guest", "booking__room"), token=token)
+    error = ""
+    if request.method == "POST" and not item.submitted_at:
+        try:
+            rating = int(request.POST.get("rating", ""))
+        except ValueError:
+            rating = 0
+        if not 1 <= rating <= 5:
+            error = "Please choose 1 to 5 stars."
+        else:
+            item.rating = rating
+            item.comment = request.POST.get("comment", "").strip()[:2000]
+            item.submitted_at = timezone.now()
+            item.save(update_fields=["rating", "comment", "submitted_at"])
+            log_action(None, "feedback.submitted", item, f"{item.booking.reference} rated {rating}/5")
+            return redirect("website:feedback", token=token)
+    return render(request, "website/feedback.html", {"item": item, "error": error})
+
+
+@role_required(*P.BOOKING_VIEW)
+def feedback_list(request):
+    from django.db.models import Avg, Count
+
+    qs = GuestFeedback.objects.exclude(submitted_at=None).select_related("booking__guest", "booking__room")
+    stats = qs.aggregate(avg=Avg("rating"), count=Count("id"))
+    return render(request, "website/feedback_list.html", {
+        "page": Paginator(qs, 25).get_page(request.GET.get("page")), "stats": stats,
+        "pending": GuestFeedback.objects.filter(submitted_at=None).count(),
+        "can_publish": request.user.has_role(*P.MANAGEMENT),
+    })
+
+
+@role_required(*P.MANAGEMENT)
+@require_POST
+def feedback_publish(request, pk):
+    item = get_object_or_404(GuestFeedback, pk=pk)
+    if not item.submitted_at:
+        messages.error(request, "This guest hasn't left feedback yet.")
+    else:
+        item.is_published = not item.is_published
+        item.save(update_fields=["is_published"])
+        messages.success(request, "Shown on the website." if item.is_published else "Hidden from the website.")
+    return redirect("website:feedback_list")

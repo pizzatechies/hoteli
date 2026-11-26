@@ -183,6 +183,8 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Created website builder pages (Home, Events, About draft)."))
 
         needed = {"101", "102", "104", "105", "106", "108", "201", "202", "203", "301", "303"}
+        self._stock_and_expenses()
+
         if not opts["no_bookings"] and not Booking.objects.exists():
             if needed <= set(Room.objects.values_list("number", flat=True)):
                 self._bookings()
@@ -190,6 +192,34 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(
                     "Skipped demo bookings: this database already has its own rooms."
                 ))
+
+    def _stock_and_expenses(self):
+        from finance.models import Expense
+        from inventory.models import StockItem
+        from inventory.services import receive
+
+        if StockItem.objects.exists():
+            return
+        today = timezone.localdate()
+        stock = [  # name, area, unit, received, unit cost, reorder level, linked menu item
+            ("Tusker lager 500ml", "BAR", "bottle", 48, "180", 24, "Tusker lager"),
+            ("Soda 500ml", "BAR", "bottle", 24, "55", 12, "Soda 500ml"),
+            ("Mineral water 1L", "MINIBAR", "bottle", 6, "70", 12, "Mineral water 1L"),
+            ("Passion fruit (kg)", "KITCHEN", "kg", 5, "150", 2, None),
+            ("Toilet rolls", "HOUSEKEEPING", "roll", 40, "35", 20, None),
+        ]
+        for name, area, unit, qty, cost, reorder, menu_name in stock:
+            item = StockItem.objects.create(name=name, area=area, unit=unit, reorder_level=reorder)
+            receive(item, qty, Decimal(cost), supplier="Demo supplier", record_expense=True)
+            if menu_name:
+                MenuItem.objects.filter(name=menu_name).update(stock_item=item, stock_quantity=1)
+        for days_ago, category, description, amount in [
+            (3, Expense.Category.UTILITIES, "KPLC electricity tokens", "12000"),
+            (2, Expense.Category.INTERNET, "Fibre internet – monthly", "6500"),
+            (1, Expense.Category.COMMISSIONS, "Booking.com commission", "4200"),
+        ]:
+            Expense.objects.create(date=today - datetime.timedelta(days=days_ago), category=category,
+                                   description=description, amount=Decimal(amount), method=Expense.Method.MPESA)
 
     def _bookings(self):
         today = timezone.localdate()
@@ -310,6 +340,12 @@ class Command(BaseCommand):
             if name in items:
                 pos.add_item(lunch, items[name], qty)
 
+        from website.models import GuestFeedback
+
+        departed = Booking.objects.filter(status=Booking.Status.CHECKED_OUT).first()
+        if departed:
+            GuestFeedback.objects.create(booking=departed, rating=5, submitted_at=timezone.now(),
+                                         comment="Sample feedback (demo data): clean room and quick check-in.")
         ContactMessage.objects.create(
             name="Event planner (demo)", email="events@example.com", phone="0711000222",
             subject="Conference for 40 people",

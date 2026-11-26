@@ -1,0 +1,26 @@
+{% load hotel %}{{ hotel.name }} – daily report for {{ day|date:"l j F Y" }}
+
+YESTERDAY
+Occupancy: {{ stats.occupancy }}% ({{ stats.rooms_sold }} of {{ summary.rooms_available }} rooms)
+Room revenue: KES {{ stats.room_revenue|money }}   ADR: KES {{ stats.adr|money }}   RevPAR: KES {{ stats.revpar|money }}
+Other revenue: KES {{ stats.other_revenue|money }}
+Collected: KES {{ stats.collected|money }}{% for m in by_method %}
+  - {{ m.label }}: KES {{ m.net|money }}{% endfor %}
+Expenses: KES {{ expenses|money }}
+
+TODAY ({{ today|date:"D j M" }})
+Arrivals: {{ arrivals|length }}{% for b in arrivals %}
+  - {{ b.guest }} · room {{ b.room.number }} · {{ b.nights }} night{{ b.nights|pluralize }}{% endfor %}
+Departures: {{ departures|length }}{% for b in departures %}
+  - {{ b.guest }} · room {{ b.room.number }}{% endfor %}
+In-house now: {{ in_house }}
+
+WATCH LIST
+Outstanding balances: KES {{ outstanding_total|money }} ({{ outstanding_count }} booking{{ outstanding_count|pluralize }})
+Low stock: {% if low_stock %}{% for i in low_stock %}{{ i.name }} ({{ i.quantity|floatformat:"-2" }} {{ i.unit }}){% if not forloop.last %}, {% endif %}{% endfor %}{% else %}none{% endif %}
+Open maintenance issues: {{ open_maintenance }}
+Unmatched Paybill payments: {{ unmatched_paybill }}
+Possible double bookings (OTA): {{ ota_conflicts }}
+Failed SMS yesterday: {{ failed_sms }}
+
+Open the dashboard: {{ site_url }}/staff/

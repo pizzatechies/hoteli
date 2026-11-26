@@ -1,0 +1,30 @@
+{% load hotel %}<!doctype html><html><body style="margin:0;background:#f4f6f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a">
+<div style="max-width:620px;margin:0 auto;padding:20px">
+  <div style="background:#0f766e;color:#fff;border-radius:12px 12px 0 0;padding:18px 22px">
+    <div style="font-size:13px;opacity:.85">Daily report</div>
+    <div style="font-size:20px;font-weight:bold">{{ hotel.name }} · {{ day|date:"D j M Y" }}</div>
+  </div>
+  <div style="background:#fff;padding:20px 22px;border-radius:0 0 12px 12px">
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px"><tr>
+      <td style="padding:8px;background:#f1f5f9;border-radius:8px;text-align:center"><div style="font-size:12px;color:#64748b">Occupancy</div><div style="font-size:22px;font-weight:bold">{{ stats.occupancy }}%</div></td>
+      <td width="8"></td>
+      <td style="padding:8px;background:#f1f5f9;border-radius:8px;text-align:center"><div style="font-size:12px;color:#64748b">Revenue</div><div style="font-size:22px;font-weight:bold">{{ stats.total_revenue|money:0 }}</div></td>
+      <td width="8"></td>
+      <td style="padding:8px;background:#f1f5f9;border-radius:8px;text-align:center"><div style="font-size:12px;color:#64748b">Collected</div><div style="font-size:22px;font-weight:bold">{{ stats.collected|money:0 }}</div></td>
+    </tr></table>
+    <p style="margin:0 0 6px;font-size:14px">ADR KES {{ stats.adr|money:0 }} · RevPAR KES {{ stats.revpar|money:0 }} · Expenses KES {{ expenses|money:0 }}</p>
+    {% if by_method %}<p style="margin:0 0 14px;font-size:13px;color:#475569">{% for m in by_method %}{{ m.label }} {{ m.net|money:0 }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+    <h3 style="font-size:15px;margin:18px 0 6px">Today: {{ arrivals|length }} arrival{{ arrivals|length|pluralize }}, {{ departures|length }} departure{{ departures|length|pluralize }}, {{ in_house }} in-house</h3>
+    <ul style="margin:0 0 10px;padding-left:18px;font-size:13px">{% for b in arrivals %}<li>Arriving: {{ b.guest }} · room {{ b.room.number }}</li>{% endfor %}{% for b in departures %}<li>Leaving: {{ b.guest }} · room {{ b.room.number }}</li>{% endfor %}</ul>
+    <h3 style="font-size:15px;margin:18px 0 6px">Watch list</h3>
+    <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6">
+      <li>Outstanding balances: <strong>KES {{ outstanding_total|money:0 }}</strong> ({{ outstanding_count }})</li>
+      <li>Low stock: {% if low_stock %}<strong style="color:#b45309">{% for i in low_stock %}{{ i.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</strong>{% else %}none{% endif %}</li>
+      <li>Open maintenance issues: {{ open_maintenance }}</li>
+      <li>Unmatched Paybill payments: {% if unmatched_paybill %}<strong style="color:#b91c1c">{{ unmatched_paybill }}</strong>{% else %}0{% endif %}</li>
+      <li>Possible double bookings: {% if ota_conflicts %}<strong style="color:#b91c1c">{{ ota_conflicts }}</strong>{% else %}0{% endif %}</li>
+    </ul>
+    <p style="margin:20px 0 0"><a href="{{ site_url }}/staff/" style="background:#0f766e;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-size:14px">Open the dashboard</a></p>
+  </div>
+  <p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:12px">Hoteli · Powered by Pizza Technologies</p>
+</div></body></html>

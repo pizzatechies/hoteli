@@ -1,4 +1,5 @@
 import re
+import uuid
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -199,7 +200,8 @@ class Section(models.Model):
     ITEM_HELP = {
         Kind.GALLERY: "One photo per line:  image URL | caption",
         Kind.FEATURES: "One per line:  icon | title | description   (icons from icons.getbootstrap.com, e.g. wifi)",
-        Kind.TESTIMONIALS: "One per line:  quote | guest name | where from (only use genuine guest feedback)",
+        Kind.TESTIMONIALS: "Leave empty to show reviews you publish under Guest feedback automatically. "
+                           "Or one per line:  quote | guest name | where from (genuine feedback only)",
         Kind.FAQ: "One per line:  question | answer",
     }
 
@@ -259,3 +261,27 @@ class Section(models.Model):
 
     def faqs(self):
         return [{"q": r[0], "a": " | ".join(r[1:])} for r in self.item_rows() if len(r) > 1]
+
+
+class GuestFeedback(models.Model):
+    """Post-stay rating and comment, requested automatically after check-out."""
+
+    booking = models.OneToOneField("bookings.Booking", on_delete=models.CASCADE, related_name="feedback")
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    rating = models.PositiveSmallIntegerField(null=True, blank=True)
+    comment = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    is_published = models.BooleanField("Show on the website", default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-submitted_at", "-created_at"]
+        verbose_name_plural = "guest feedback"
+
+    def __str__(self):
+        return f"Feedback {self.booking.reference}: {self.rating or '–'}"
+
+    @property
+    def display_name(self):
+        guest = self.booking.guest
+        return f"{guest.first_name} {guest.last_name[:1]}.".strip()

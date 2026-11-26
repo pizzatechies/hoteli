@@ -63,6 +63,9 @@ def charge_to_room(order, user=None):
         order.status = Order.Status.CHARGED
         order.closed_at = timezone.now()
         order.save(update_fields=["status", "closed_at"])
+        from inventory.services import deduct_order
+
+        deduct_order(order, user)
         log_action(user, "pos.charge_room", order,
                    f"{order.number} ({order.total:,.2f}) charged to room {order.booking.room.number}")
     return order
@@ -74,6 +77,9 @@ def on_order_payment(order):
         order.status = Order.Status.PAID
         order.closed_at = timezone.now()
         order.save(update_fields=["status", "closed_at"])
+        from inventory.services import deduct_order
+
+        deduct_order(order)
 
 
 def cancel_order(order, user=None, reason=""):
@@ -91,6 +97,9 @@ def cancel_order(order, user=None, reason=""):
             raise BookingError("Paid orders cannot be cancelled. Refund or void the payment first.")
         if order.paid_total > 0:
             raise BookingError("Void the payments on this order before cancelling it.")
+        from inventory.services import restore_order
+
+        restore_order(order, user)
         order.status = Order.Status.CANCELLED
         order.closed_at = timezone.now()
         order.notes = (f"{order.notes} | Cancelled: {reason}" if order.notes else f"Cancelled: {reason}")[:255]

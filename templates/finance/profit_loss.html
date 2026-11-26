@@ -1,0 +1,27 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}Profit & loss{% endblock %}
+{% block page_title %}Profit &amp; loss{% endblock %}
+{% block content %}
+<div class="card card-body mb-3"><form class="row g-2 align-items-end" method="get">
+  <div class="col-sm-4"><label class="form-label small">From</label>{{ form.start }}</div>
+  <div class="col-sm-4"><label class="form-label small">To</label>{{ form.end }}</div>
+  <div class="col-sm-4 d-flex gap-2"><button class="btn btn-primary">Run</button><button type="button" class="btn btn-light" onclick="window.print()"><i class="bi bi-printer"></i> Print</button></div>
+</form></div>
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">Revenue</div><div class="stat-value money">{{ pl.total_revenue|money:0 }}</div></div></div></div>
+  <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">Expenses</div><div class="stat-value money">{{ pl.total_expenses|money:0 }}</div></div></div></div>
+  <div class="col-md-4"><div class="card stat-card"><div class="card-body"><div class="stat-label">{% if pl.profit < 0 %}Loss{% else %}Profit{% endif %}</div><div class="stat-value money {% if pl.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ pl.profit|money:0 }}</div><div class="small text-body-secondary">{{ pl.margin }}% margin</div></div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Revenue (earned {{ start|date:"j M" }} – {{ end|date:"j M Y" }})</div>
+    <table class="table table-sm mb-0"><tbody>{% for label, amount in pl.revenue %}<tr><td>{{ label }}</td><td class="text-end money">{{ amount|money }}</td></tr>
+      {% empty %}<tr><td class="text-body-secondary small">No revenue in this period.</td></tr>{% endfor %}</tbody>
+      <tfoot><tr class="fw-bold"><td>Total revenue</td><td class="text-end money">{{ pl.total_revenue|money }}</td></tr></tfoot></table></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Expenses</span><a href="{% url 'finance:expenses' %}?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}" class="small fw-normal">Details</a></div>
+    <table class="table table-sm mb-0"><tbody>{% for label, amount in pl.expenses %}<tr><td>{{ label }}</td><td class="text-end money">{{ amount|money }}</td></tr>
+      {% empty %}<tr><td class="text-body-secondary small">No expenses recorded.</td></tr>{% endfor %}</tbody>
+      <tfoot><tr class="fw-bold"><td>Total expenses</td><td class="text-end money">{{ pl.total_expenses|money }}</td></tr></tfoot></table></div></div>
+</div>
+<p class="small text-body-secondary mt-3">Revenue is counted when it is earned: room nights and folio charges by service date, and walk-in restaurant and bar orders when they are paid. Amounts include VAT and levies. Expenses are counted by expense date.</p>
+{% endblock %}
