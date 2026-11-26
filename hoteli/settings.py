@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "pos",
     "website",
     "notifications",
+    "channel_sync",
 ]
 
 MIDDLEWARE = [

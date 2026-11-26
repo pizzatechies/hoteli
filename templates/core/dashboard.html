@@ -30,10 +30,11 @@
     <span class="stat-icon bg-info-subtle text-info-emphasis"><i class="bi bi-graph-up-arrow"></i></span></div></div></div>
 </div>
 
-{% if pending_web or unmatched_c2b or open_maintenance %}
+{% if pending_web or unmatched_c2b or open_maintenance or ota_conflicts %}
 <div class="d-flex flex-wrap gap-2 mb-3">
   {% if pending_web %}<a href="{% url 'bookings:list' %}?status=PENDING&source=WEBSITE" class="alert alert-warning py-2 px-3 mb-0 text-decoration-none"><i class="bi bi-globe"></i> {{ pending_web }} online booking(s) awaiting deposit</a>{% endif %}
   {% if unmatched_c2b %}<a href="{% url 'mpesa:c2b_list' %}?status=UNMATCHED" class="alert alert-danger py-2 px-3 mb-0 text-decoration-none"><i class="bi bi-exclamation-triangle"></i> {{ unmatched_c2b }} unmatched Paybill payment(s)</a>{% endif %}
+  {% if ota_conflicts %}<a href="{% url 'channel_sync:list' %}" class="alert alert-danger py-2 px-3 mb-0 text-decoration-none"><i class="bi bi-arrow-repeat"></i> {{ ota_conflicts }} possible double booking(s) with Booking.com/Airbnb</a>{% endif %}
   {% if open_maintenance %}<a href="{% url 'housekeeping:maintenance' %}" class="alert alert-secondary py-2 px-3 mb-0 text-decoration-none"><i class="bi bi-tools"></i> {{ open_maintenance }} open maintenance issue(s)</a>{% endif %}
 </div>
 {% endif %}

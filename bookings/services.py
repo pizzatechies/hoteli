@@ -43,7 +43,10 @@ def available_rooms(check_in, check_out, room_type=None, exclude_booking=None, p
     busy = Booking.objects.active().overlapping(check_in, check_out)
     if exclude_booking is not None:
         busy = busy.exclude(pk=exclude_booking.pk)
-    rooms = Room.objects.filter(is_active=True).exclude(pk__in=busy.values("room_id"))
+    from channel_sync.services import blocks_overlapping
+
+    rooms = (Room.objects.filter(is_active=True).exclude(pk__in=busy.values("room_id"))
+             .exclude(pk__in=blocks_overlapping(check_in, check_out).values("room_id")))
     today = timezone.localdate()
     if check_in <= today or public:
         rooms = rooms.filter(is_out_of_order=False)
@@ -110,6 +113,14 @@ def validate_stay(room, check_in, check_out, adults=1, children=0, exclude_booki
         raise BookingError(f"{rt.name} rooms take at most {rt.max_adults} adult(s).")
     if adults + children > rt.max_occupancy:
         raise BookingError(f"{rt.name} rooms take at most {rt.max_occupancy} guest(s) in total.")
+    from channel_sync.services import blocks_overlapping
+
+    block = blocks_overlapping(check_in, check_out).filter(room=room).select_related("calendar").first()
+    if block:
+        raise BookingError(
+            f"Room {room.number} is blocked by {block.source} from {block.start_date:%d %b} to "
+            f"{block.end_date:%d %b}."
+        )
     clash = Booking.objects.active().overlapping(check_in, check_out).filter(room=room)
     if exclude_booking is not None:
         clash = clash.exclude(pk=exclude_booking.pk)

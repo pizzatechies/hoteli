@@ -10,3 +10,12 @@ def _retry_sms():
 
 
 register_interval("sms_retry", 120, _retry_sms)
+
+
+def _sync_calendars():
+    from channel_sync.services import sync_all
+
+    sync_all()
+
+
+register_interval("calendar_sync", 1800, _sync_calendars)

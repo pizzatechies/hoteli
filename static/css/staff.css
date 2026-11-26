@@ -101,3 +101,4 @@ pre.payload { background: #0f172a; color: #e2e8f0; padding: .8rem; border-radius
 .logo-preview.dark { background: var(--sidebar-bg); }
 .sidebar-footer { padding: 1rem 1.1rem 1.25rem; border-top: 1px solid rgba(255,255,255,.08); font-size: .72rem; color: #64748b; line-height: 1.4; }
 @media (min-width: 992px) { .sidebar.offcanvas-lg { display: flex; flex-direction: column; } .sidebar-nav { flex: 1 0 auto; } }
+.stay-BLOCK a { background: #7c3aed; }

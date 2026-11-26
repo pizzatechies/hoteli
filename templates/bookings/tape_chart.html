@@ -13,7 +13,7 @@
   </div>
   <div class="small d-flex gap-3 flex-wrap">
     <span><span class="legend-dot" style="background:#f59e0b"></span>Pending</span><span><span class="legend-dot" style="background:#2563eb"></span>Confirmed</span>
-    <span><span class="legend-dot" style="background:#16a34a"></span>In-house</span><span><span class="legend-dot" style="background:#94a3b8"></span>Checked out</span>
+    <span><span class="legend-dot" style="background:#16a34a"></span>In-house</span><span><span class="legend-dot" style="background:#94a3b8"></span>Checked out</span><span><span class="legend-dot" style="background:#7c3aed"></span>Booking.com / Airbnb / blocked</span>
   </div>
 </div>
 <div class="card"><div class="table-responsive">
@@ -24,7 +24,11 @@
   <tr>
     <th class="room-col"><span class="fw-bold">{{ row.room.number }}</span> <span class="small text-body-secondary d-block">{{ row.room.room_type.name|truncatechars:16 }}{% if row.room.is_out_of_order %} · <span class="text-danger">OOO</span>{% endif %}</span></th>
     {% for cell in row.cells %}
-      {% if cell.booking %}
+      {% if cell.booking.block %}
+      <td colspan="{{ cell.span }}" class="stay stay-BLOCK">
+        <a href="{% url 'channel_sync:list' %}" class="{% if cell.cut_left %}cut-left{% endif %} {% if cell.cut_right %}cut-right{% endif %}" title="{{ cell.booking.block.source }}: {{ cell.booking.block.summary }}">{% if cell.booking.block.conflict %}⚠ {% endif %}{{ cell.booking.block.source }}</a>
+      </td>
+      {% elif cell.booking %}
       <td colspan="{{ cell.span }}" class="stay stay-{{ cell.booking.status }}">
         <a href="{% url 'bookings:detail' cell.booking.pk %}" class="{% if cell.cut_left %}cut-left{% endif %} {% if cell.cut_right %}cut-right{% endif %}" title="{{ cell.booking.guest }} · {{ cell.booking.reference }} · {{ cell.booking.check_in_date|date:'d M' }}–{{ cell.booking.check_out_date|date:'d M' }}">{{ cell.booking.guest }}</a>
       </td>

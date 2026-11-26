@@ -478,6 +478,13 @@ def tape_chart(request):
     by_room = defaultdict(list)
     for b in bookings:
         by_room[b.room_id].append(b)
+    from types import SimpleNamespace
+
+    from channel_sync.models import RoomBlock
+
+    for block in RoomBlock.objects.filter(start_date__lt=end, end_date__gt=start).select_related("calendar"):
+        by_room[block.room_id].append(SimpleNamespace(
+            check_in_date=block.start_date, check_out_date=block.end_date, block=block, pk=None))
     rows = []
     for room in rooms:
         stays = sorted(by_room[room.id], key=lambda b: b.check_in_date)

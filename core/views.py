@@ -25,6 +25,12 @@ from .forms import DateRangeForm, HotelIdentityForm, HotelSettingsForm, LogoUplo
 from .models import AuditLog, BrandAsset, HotelSettings, log_action
 
 
+def _ota_conflicts(today):
+    from channel_sync.models import RoomBlock
+
+    return RoomBlock.objects.filter(end_date__gt=today).exclude(conflict="").count()
+
+
 def _month_start(day):
     return day.replace(day=1)
 
@@ -89,6 +95,7 @@ def dashboard(request):
         ).count(),
         "open_maintenance": MaintenanceRequest.objects.filter(status__in=MaintenanceRequest.OPEN_STATUSES).count(),
         "unmatched_c2b": C2BTransaction.objects.filter(status=C2BTransaction.Status.UNMATCHED).count(),
+        "ota_conflicts": _ota_conflicts(today),
         "recent_mpesa": MpesaTransaction.objects.select_related("booking", "order")[:8],
         "chart_labels": [d.strftime("%d %b") for d in chart_days],
         "chart_values": [float(daily.get(d) or 0) for d in chart_days],

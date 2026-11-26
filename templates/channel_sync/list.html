@@ -1,0 +1,66 @@
+{% extends "base_staff.html" %}
+{% block title %}Channels{% endblock %}
+{% block page_title %}Channels: Booking.com, Airbnb &amp; other sites{% endblock %}
+{% block content %}
+<div class="page-actions">
+  <h1>Calendar sync</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <form method="post" action="{% url 'channel_sync:sync_all' %}">{% csrf_token %}<button class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> Sync all now</button></form>
+    {% if can_manage %}<a href="{% url 'channel_sync:create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Connect a room</a>{% endif %}
+  </div>
+</div>
+
+{% if conflicts %}
+<div class="alert alert-danger"><strong><i class="bi bi-exclamation-triangle"></i> Possible double bookings</strong>
+  <ul class="mb-0 mt-1">{% for b in conflicts %}<li>Room {{ b.room.number }}, {{ b.start_date|date:"d M" }}–{{ b.end_date|date:"d M" }} ({{ b.source }}): {{ b.conflict }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<div class="card mb-3"><div class="card-header">Connected listings</div>
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Room</th><th>Site</th><th>Our availability link (give this to the site)</th><th>Their link</th><th>Last sync</th><th></th></tr></thead>
+    <tbody>{% for c in calendars %}
+      <tr class="{% if not c.is_active %}text-body-tertiary{% endif %}">
+        <td class="fw-semibold">{{ c.room.number }}<div class="small text-body-secondary">{{ c.room.room_type }}</div></td>
+        <td>{{ c.name }}</td>
+        <td style="min-width:260px"><input class="form-control form-control-sm font-monospace" readonly value="{{ c.feed_url }}" onclick="this.select()"></td>
+        <td class="small">{% if c.import_url %}<span class="text-success"><i class="bi bi-link-45deg"></i> set</span>{% else %}<span class="text-body-secondary">not set</span>{% endif %}</td>
+        <td class="small">{% if c.last_synced_at %}{{ c.last_synced_at|date:"d M H:i" }} · {{ c.events_imported }} reservation{{ c.events_imported|pluralize }}{% else %}never{% endif %}
+          {% if c.last_error %}<div class="text-danger">{{ c.last_error }}</div>{% endif %}</td>
+        <td class="text-end text-nowrap">
+          {% if c.import_url %}<form class="d-inline" method="post" action="{% url 'channel_sync:sync' c.pk %}">{% csrf_token %}<button class="btn btn-sm btn-light" title="Sync now"><i class="bi bi-arrow-repeat"></i></button></form>{% endif %}
+          {% if can_manage %}<a href="{% url 'channel_sync:edit' c.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>{% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="text-body-secondary">No listings connected yet. {% if can_manage %}<a href="{% url 'channel_sync:create' %}">Connect a room</a> to stop double bookings with Booking.com, Airbnb or Expedia.{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  <div class="card-body small text-body-secondary border-top">
+    <strong>How it works:</strong> 1) In Booking.com / Airbnb, find the room's <em>calendar export (iCal) link</em> and paste it here. 2) Copy <em>our availability link</em> above into the site's <em>calendar import</em> setting. Reservations then block rooms both ways. Calendars sync every 30 minutes; most sites refresh imported calendars every few hours, so take payment-sensitive last-minute bookings by phone. Our link only says "Reserved", with no guest details.
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8"><div class="card h-100"><div class="card-header">Upcoming blocks</div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Room</th><th>Dates</th><th>Source</th><th>Note</th><th></th></tr></thead>
+      <tbody>{% for b in blocks %}
+        <tr class="{% if b.conflict %}table-danger{% endif %}"><td class="fw-semibold">{{ b.room.number }}</td><td class="small">{{ b.start_date|date:"D d M" }} → {{ b.end_date|date:"D d M" }}</td>
+          <td>{{ b.source }}</td><td class="small">{{ b.summary }}{% if b.conflict %}<div class="text-danger">{{ b.conflict }}</div>{% endif %}</td>
+          <td class="text-end">{% if not b.calendar_id %}<form method="post" action="{% url 'channel_sync:block_delete' b.pk %}" onsubmit="return confirm('Remove this block?')">{% csrf_token %}<button class="btn btn-sm btn-link text-danger p-0">Remove</button></form>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="small text-body-secondary">No upcoming blocks.</td></tr>{% endfor %}</tbody>
+    </table></div></div></div>
+  <div class="col-xl-4"><div class="card h-100"><div class="card-header">Block a room manually</div><div class="card-body">
+    <form method="post" action="{% url 'channel_sync:block_create' %}">{% csrf_token %}
+      <div class="row g-2">
+        {% include "partials/field.html" with field=block_form.room col="col-12" %}
+        {% include "partials/field.html" with field=block_form.start_date col="col-6" %}
+        {% include "partials/field.html" with field=block_form.end_date col="col-6" %}
+        {% include "partials/field.html" with field=block_form.summary col="col-12" %}
+      </div>
+      <button class="btn btn-outline-primary w-100 mt-2">Block dates</button>
+      <div class="form-text">For owner stays or reservations taken elsewhere. Blocked rooms can't be booked here and show as unavailable on connected sites.</div>
+    </form>
+  </div></div></div>
+</div>
+{% endblock %}
