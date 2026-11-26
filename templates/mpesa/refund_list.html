@@ -1,0 +1,22 @@
+{% extends "base_staff.html" %}
+{% load hotel %}
+{% block title %}M-Pesa refunds{% endblock %}
+{% block page_title %}M-Pesa refunds{% endblock %}
+{% block content %}
+{% include "mpesa/_tabs.html" with active="refunds" %}
+{% if not enabled %}<div class="alert alert-info small">M-Pesa refunds are off. In Daraja, enable B2C for your shortcode, then set <code>MPESA_B2C_INITIATOR_NAME</code> and <code>MPESA_B2C_SECURITY_CREDENTIAL</code> (and <code>MPESA_B2C_SHORTCODE</code> if it differs). Refunds can then be sent from a booking's <em>Refund</em> tab.</div>{% endif %}
+<div class="card"><div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>Time</th><th>Booking</th><th>To</th><th class="text-end">Amount</th><th>Status</th><th>M-Pesa code</th><th>Reason</th><th>By</th></tr></thead>
+  <tbody>{% for r in page %}<tr>
+    <td class="small text-nowrap">{{ r.created_at|date:"d M H:i" }}</td>
+    <td><a href="{% url 'bookings:detail' r.booking_id %}">{{ r.booking.reference }}</a><div class="small text-body-secondary">{{ r.booking.guest }}</div></td>
+    <td class="small">{{ r.phone }}{% if r.receiver_name %}<div class="text-body-secondary">{{ r.receiver_name }}</div>{% endif %}</td>
+    <td class="text-end money">{{ r.amount|money:0 }}</td>
+    <td>{% if r.status == "SUCCESS" %}<span class="badge text-bg-success">Refunded</span>{% elif r.status == "FAILED" %}<span class="badge text-bg-danger">Failed</span>{% else %}<span class="badge text-bg-warning">Sending</span>{% endif %}{% if r.is_simulated %} <span class="badge text-bg-light">sim</span>{% endif %}</td>
+    <td class="fw-semibold">{{ r.transaction_id|default:"—" }}</td>
+    <td class="small">{{ r.reason }}{% if r.status == "FAILED" %}<div class="text-danger">{{ r.result_desc }}</div>{% endif %}</td>
+    <td class="small">{{ r.requested_by|default:"—" }}</td>
+  </tr>{% empty %}<tr><td colspan="8" class="text-body-secondary">No M-Pesa refunds yet.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

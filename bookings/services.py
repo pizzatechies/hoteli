@@ -439,7 +439,8 @@ def void_charge(charge, user=None, reason=""):
 
 
 def record_payment(*, amount, method, booking=None, order=None, reference="", payer_phone="",
-                   notes="", user=None, kind=Payment.Kind.PAYMENT, skip_duplicate_check=False):
+                   notes="", user=None, kind=Payment.Kind.PAYMENT, skip_duplicate_check=False,
+                   enforce_limits=True):
     amount = Decimal(amount)
     if amount <= 0:
         raise BookingError("Amount must be greater than zero.")
@@ -453,7 +454,7 @@ def record_payment(*, amount, method, booking=None, order=None, reference="", pa
             raise BookingError(
                 f"M-Pesa code {reference} is already recorded ({dup.receipt_number} on {dup.target_label})."
             )
-    if kind == Payment.Kind.REFUND and booking is not None and amount > booking.payments_total:
+    if kind == Payment.Kind.REFUND and booking is not None and enforce_limits and amount > booking.payments_total:
         raise BookingError("Refund cannot exceed the amount paid.")
     with transaction.atomic():
         payment = Payment.objects.create(

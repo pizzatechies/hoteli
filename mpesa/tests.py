@@ -349,3 +349,107 @@ class SimulationTests(HotelTestCase):
                                              description="x", is_simulated=True, checkout_request_id="ws_CO_SIM_1")
         resp = self.client.post(reverse("mpesa:simulate", args=[tx.uuid]), {"outcome": "success"})
         self.assertEqual(resp.status_code, 404)
+
+
+B2C_LIVE = dict(LIVE, MPESA_B2C_INITIATOR_NAME="testapi", MPESA_B2C_SECURITY_CREDENTIAL="cred==",
+                MPESA_B2C_SHORTCODE="600996", MPESA_B2C_COMMAND_ID="BusinessPayment")
+
+
+def b2c_result(originator, code=0, receipt="NLJ41HAY6Q", amount=2000):
+    result = {"ResultType": 0, "ResultCode": code, "ResultDesc": "The service request is processed successfully.",
+              "OriginatorConversationID": originator, "ConversationID": "AG_20261126_123", "TransactionID": receipt}
+    if code == 0:
+        result["ResultParameters"] = {"ResultParameter": [
+            {"Key": "TransactionAmount", "Value": amount}, {"Key": "TransactionReceipt", "Value": receipt},
+            {"Key": "ReceiverPartyPublicName", "Value": "254712345678 - JANE DOE"}]}
+    else:
+        result["ResultDesc"] = "The initiator information is invalid."
+    return {"Result": result}
+
+
+class RefundTests(HotelTestCase):
+    def setUp(self):
+        super().setUp()
+        self.booking = self.make_booking(ci=-2, co=0, status=Booking.Status.CHECKED_OUT)
+        record_payment(booking=self.booking, amount=Decimal("5000"), method=Payment.Method.MPESA, reference="QAZ123WSX")
+
+    @override_settings(MPESA_SIMULATE=True)
+    def test_simulated_refund_is_recorded_on_folio(self):
+        refund = services.initiate_refund(booking=self.booking, phone="0712345678", amount=2000, reason="Overpaid")
+        self.assertEqual(refund.status, refund.Status.SUCCESS)
+        self.assertEqual(refund.payment.kind, Payment.Kind.REFUND)
+        self.assertEqual(self.booking.payments_total, Decimal("3000"))
+
+    @override_settings(MPESA_SIMULATE=True)
+    def test_cannot_refund_more_than_paid_including_pending(self):
+        from mpesa.models import B2CRefund
+
+        B2CRefund.objects.create(booking=self.booking, phone="254712345678", amount=4000, reason="x",
+                                 originator_conversation_id="pending-1")
+        with self.assertRaisesMessage(services.MpesaError, "at most KES 1,000"):
+            services.initiate_refund(booking=self.booking, phone="0712345678", amount=2000, reason="Overpaid")
+
+    @override_settings(**B2C_LIVE)
+    def test_live_refund_payload_and_result_callback(self):
+        ok = fake_response(200, {"ConversationID": "AG_20261126_123", "OriginatorConversationID": "x",
+                                 "ResponseCode": "0", "ResponseDescription": "Accept the service request successfully."})
+        with mock.patch("mpesa.daraja.requests.get", return_value=TOKEN), \
+                mock.patch("mpesa.daraja.requests.post", return_value=ok) as post:
+            refund = services.initiate_refund(booking=self.booking, phone="0712345678", amount=2000, reason="Overpaid")
+        payload = post.call_args.kwargs["json"]
+        self.assertTrue(post.call_args.args[0].endswith("/mpesa/b2c/v3/paymentrequest"))
+        self.assertEqual(payload["PartyA"], "600996")
+        self.assertEqual(payload["PartyB"], "254712345678")
+        self.assertEqual(payload["Amount"], 2000)
+        self.assertEqual(payload["InitiatorName"], "testapi")
+        self.assertEqual(payload["ResultURL"], "https://hotel.example.com/payments/callbacks/b2c/result/tok123/")
+        self.assertEqual(refund.status, refund.Status.PENDING)
+        self.assertEqual(self.booking.payments_total, Decimal("5000"))  # nothing recorded until confirmed
+
+        url = reverse("mpesa:b2c_result", args=["tok123"])
+        body = json.dumps(b2c_result(refund.originator_conversation_id))
+        self.client.post(url, data=body, content_type="application/json")
+        self.client.post(url, data=body, content_type="application/json")  # duplicate
+        refund.refresh_from_db()
+        self.assertEqual(refund.status, refund.Status.SUCCESS)
+        self.assertEqual(refund.transaction_id, "NLJ41HAY6Q")
+        self.assertEqual(Payment.objects.filter(kind=Payment.Kind.REFUND).count(), 1)
+        self.assertEqual(self.booking.payments_total, Decimal("3000"))
+
+    @override_settings(**B2C_LIVE)
+    def test_failed_and_timed_out_refunds(self):
+        from mpesa.models import B2CRefund
+
+        failed = B2CRefund.objects.create(booking=self.booking, phone="254712345678", amount=1000, reason="x",
+                                          originator_conversation_id="o-fail")
+        self.client.post(reverse("mpesa:b2c_result", args=["tok123"]),
+                         data=json.dumps(b2c_result("o-fail", code=2001)), content_type="application/json")
+        failed.refresh_from_db()
+        self.assertEqual(failed.status, B2CRefund.Status.FAILED)
+        slow = B2CRefund.objects.create(booking=self.booking, phone="254712345678", amount=1000, reason="x",
+                                        originator_conversation_id="o-slow")
+        self.client.post(reverse("mpesa:b2c_timeout", args=["tok123"]),
+                         data=json.dumps({"Result": {"OriginatorConversationID": "o-slow"}}),
+                         content_type="application/json")
+        slow.refresh_from_db()
+        self.assertEqual(slow.status, B2CRefund.Status.FAILED)
+        self.assertEqual(Payment.objects.filter(kind=Payment.Kind.REFUND).count(), 0)
+        resp = self.client.post(reverse("mpesa:b2c_result", args=["wrong"]), data="{}", content_type="application/json")
+        self.assertEqual(resp.status_code, 404)
+
+    @override_settings(MPESA_SIMULATE=False, MPESA_B2C_INITIATOR_NAME="", MPESA_B2C_SECURITY_CREDENTIAL="")
+    def test_refunds_off_without_credentials(self):
+        with self.assertRaisesMessage(services.MpesaError, "not set up"):
+            services.initiate_refund(booking=self.booking, phone="0712345678", amount=100, reason="x")
+
+    @override_settings(MPESA_SIMULATE=True)
+    def test_only_finance_can_send_refunds(self):
+        self.login(self.reception)
+        resp = self.client.post(reverse("mpesa:refund_start"), {"booking": self.booking.pk, "phone": "0712345678",
+                                                                 "amount": "100", "reason": "x"})
+        self.assertEqual(resp.status_code, 403)
+        self.login(self.accountant)
+        self.client.post(reverse("mpesa:refund_start"), {"booking": self.booking.pk, "phone": "0712345678",
+                                                         "amount": "100", "reason": "Goodwill"})
+        self.assertEqual(self.booking.payments_total, Decimal("4900"))
+        self.assertContains(self.client.get(reverse("mpesa:refund_list")), "Goodwill")

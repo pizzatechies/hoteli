@@ -254,6 +254,12 @@ MPESA_QUERY_AFTER_SECONDS = int(env("MPESA_QUERY_AFTER_SECONDS", "20"))
 # Seconds after which an unanswered STK push is treated as timed out.
 MPESA_STK_TIMEOUT_SECONDS = int(env("MPESA_STK_TIMEOUT_SECONDS", "180"))
 MPESA_REQUEST_TIMEOUT = int(env("MPESA_REQUEST_TIMEOUT", "30"))
+# Refunds to guests' phones (Daraja B2C). The security credential is generated in the Daraja portal
+# from your initiator password; leave these blank to keep M-Pesa refunds switched off (except in simulation).
+MPESA_B2C_SHORTCODE = env("MPESA_B2C_SHORTCODE", "") or MPESA_SHORTCODE
+MPESA_B2C_INITIATOR_NAME = env("MPESA_B2C_INITIATOR_NAME", "")
+MPESA_B2C_SECURITY_CREDENTIAL = env("MPESA_B2C_SECURITY_CREDENTIAL", "")
+MPESA_B2C_COMMAND_ID = env("MPESA_B2C_COMMAND_ID", "BusinessPayment")
 
 # --------------------------------------------------------------------------------------
 # Logging

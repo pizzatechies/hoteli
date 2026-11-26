@@ -145,6 +145,27 @@ class DarajaClient:
         }
         return self._post("/mpesa/stkpushquery/v1/query", payload)
 
+    # ------------------------------------------------------------------ B2C (refunds)
+    def b2c_payment(self, *, originator_id, phone, amount, remarks, result_url, timeout_url, occasion=""):
+        payload = {
+            "OriginatorConversationID": originator_id,
+            "InitiatorName": settings.MPESA_B2C_INITIATOR_NAME,
+            "SecurityCredential": settings.MPESA_B2C_SECURITY_CREDENTIAL,
+            "CommandID": settings.MPESA_B2C_COMMAND_ID,
+            "Amount": int(amount),
+            "PartyA": str(settings.MPESA_B2C_SHORTCODE),
+            "PartyB": phone,
+            "Remarks": remarks[:100] or "Refund",
+            "QueueTimeOutURL": timeout_url,
+            "ResultURL": result_url,
+            "Occassion": occasion[:100],  # (sic) Daraja's field name
+        }
+        data = self._post("/mpesa/b2c/v3/paymentrequest", payload)
+        if str(data.get("ResponseCode")) != "0":
+            raise DarajaError(data.get("ResponseDescription") or "M-Pesa rejected the refund request.",
+                              code=data.get("ResponseCode"), response=data)
+        return data
+
     # ------------------------------------------------------------------ C2B (Paybill)
     def register_c2b_urls(self, *, confirmation_url, validation_url, response_type="Completed"):
         payload = {

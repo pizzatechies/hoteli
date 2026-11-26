@@ -25,6 +25,18 @@ from .models import Booking, Charge, Guest, Payment
 from .services import BookingError
 
 
+def _refunds_enabled():
+    from mpesa.services import refunds_enabled
+
+    return refunds_enabled()
+
+
+def _refundable(booking):
+    from mpesa.services import refundable_amount
+
+    return refundable_amount(booking)
+
+
 def _ceil(amount):
     return Decimal(amount).quantize(Decimal("1"), rounding=ROUND_CEILING)
 
@@ -209,6 +221,9 @@ def booking_detail(request, pk):
         "hk_tasks": booking.hk_tasks.all()[:5],
         "pos_orders": booking.pos_orders.all()[:10],
         "active_tx": request.GET.get("tx", ""),
+        "mpesa_refunds": booking.mpesa_refunds.all()[:10],
+        "mpesa_refunds_enabled": _refunds_enabled(),
+        "refundable": _refundable(booking),
         "can_front_desk": user.has_role(*P.FRONT_DESK),
         "can_take_payment": user.has_role(*P.BOOKING_VIEW),
         "can_void": user.has_role(*P.FINANCE),

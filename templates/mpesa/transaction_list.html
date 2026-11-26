@@ -3,11 +3,7 @@
 {% block title %}M-Pesa{% endblock %}
 {% block page_title %}M-Pesa{% endblock %}
 {% block content %}
-<ul class="nav nav-pills mb-3">
-  <li class="nav-item"><a class="nav-link active" href="{% url 'mpesa:list' %}">STK push</a></li>
-  <li class="nav-item"><a class="nav-link" href="{% url 'mpesa:c2b_list' %}">Paybill (C2B) {% if unmatched %}<span class="badge text-bg-danger">{{ unmatched }}</span>{% endif %}</a></li>
-  {% if nav.finance %}<li class="nav-item"><a class="nav-link" href="{% url 'mpesa:callback_logs' %}">Callback log</a></li>{% endif %}
-</ul>
+{% include "mpesa/_tabs.html" with active="stk" %}
 <form class="row g-2 mb-3" method="get">
   <div class="col-md-5"><input name="q" value="{{ q }}" class="form-control" placeholder="Phone, receipt or account reference"></div>
   <div class="col-md-3"><select name="status" class="form-select"><option value="">All statuses</option>{% for v, l in statuses %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>

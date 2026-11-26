@@ -1,0 +1,6 @@
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link {% if active == 'stk' %}active{% endif %}" href="{% url 'mpesa:list' %}">STK push</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'c2b' %}active{% endif %}" href="{% url 'mpesa:c2b_list' %}">Paybill (C2B){% if unmatched %} <span class="badge text-bg-danger">{{ unmatched }}</span>{% endif %}</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'refunds' %}active{% endif %}" href="{% url 'mpesa:refund_list' %}">Refunds (B2C)</a></li>
+  {% if nav.finance %}<li class="nav-item"><a class="nav-link {% if active == 'logs' %}active{% endif %}" href="{% url 'mpesa:callback_logs' %}">Callback log</a></li>{% endif %}
+</ul>

@@ -3,11 +3,7 @@
 {% block title %}Paybill payments{% endblock %}
 {% block page_title %}M-Pesa Paybill (C2B){% endblock %}
 {% block content %}
-<ul class="nav nav-pills mb-3">
-  <li class="nav-item"><a class="nav-link" href="{% url 'mpesa:list' %}">STK push</a></li>
-  <li class="nav-item"><a class="nav-link active" href="{% url 'mpesa:c2b_list' %}">Paybill (C2B)</a></li>
-  {% if nav.finance %}<li class="nav-item"><a class="nav-link" href="{% url 'mpesa:callback_logs' %}">Callback log</a></li>{% endif %}
-</ul>
+{% include "mpesa/_tabs.html" with active="c2b" %}
 <p class="small text-body-secondary">Guests who pay to the Paybill with their booking reference (e.g. <code>HB7K2M9Q</code>) as the account number are matched automatically. Anything else lands here as <em>unmatched</em> for you to allocate.</p>
 <form class="row g-2 mb-3" method="get"><div class="col-md-3"><select name="status" class="form-select" onchange="this.form.submit()"><option value="">All</option>{% for v, l in statuses %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div></form>
 <div class="card"><div class="table-responsive"><table class="table align-middle mb-0">

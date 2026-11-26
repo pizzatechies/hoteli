@@ -387,3 +387,151 @@ def record_manual_mpesa_payment(*, booking=None, order=None, code, amount, user=
         booking=booking, order=order, amount=amount, method=Payment.Method.MPESA, reference=code,
         payer_phone=payer_phone, notes=notes or "M-Pesa (entered manually)", user=user,
     )
+
+
+# ------------------------------------------------------------------------------ B2C refunds
+def refunds_enabled():
+    return is_simulation() or bool(settings.MPESA_B2C_INITIATOR_NAME and settings.MPESA_B2C_SECURITY_CREDENTIAL)
+
+
+def b2c_urls():
+    token = settings.MPESA_CALLBACK_TOKEN
+    base = settings.MPESA_CALLBACK_BASE_URL
+    return {
+        "result": base + reverse("mpesa:b2c_result", args=[token]),
+        "timeout": base + reverse("mpesa:b2c_timeout", args=[token]),
+    }
+
+
+def refundable_amount(booking):
+    """Money paid on the booking that is not already refunded or being refunded."""
+    from .models import B2CRefund
+
+    pending = sum((r.amount for r in booking.mpesa_refunds.filter(status=B2CRefund.Status.PENDING)), Decimal("0"))
+    return max(booking.payments_total - pending, Decimal("0"))
+
+
+def initiate_refund(*, booking, phone, amount, reason, user=None):
+    from .models import B2CRefund
+
+    if not refunds_enabled():
+        raise MpesaError("M-Pesa refunds are not set up. Add the B2C initiator name and security credential.")
+    try:
+        msisdn = normalize_phone(phone)
+        amount = stk_amount(amount)
+    except ValueError as exc:
+        raise MpesaError(str(exc)) from exc
+    reason = (reason or "").strip()
+    if not reason:
+        raise MpesaError("Give a reason for the refund.")
+    with transaction.atomic():
+        booking = Booking.objects.select_for_update().get(pk=booking.pk)
+        if amount > refundable_amount(booking):
+            raise MpesaError(f"You can refund at most KES {refundable_amount(booking):,.0f} on this booking.")
+        refund = B2CRefund.objects.create(
+            booking=booking, phone=msisdn, amount=amount, reason=reason[:100],
+            originator_conversation_id=f"HTL-{secrets.token_hex(12)}", is_simulated=is_simulation(),
+            requested_by=user if getattr(user, "is_authenticated", False) else None,
+        )
+    log_action(user, "mpesa.refund_request", refund,
+               f"M-Pesa refund KES {amount:,.0f} to {msisdn} for {booking.reference}: {reason}")
+    if refund.is_simulated:
+        receipt = "R" + "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(9))
+        process_b2c_result({"Result": {
+            "ResultType": 0, "ResultCode": 0, "ResultDesc": "The service request is processed successfully.",
+            "OriginatorConversationID": refund.originator_conversation_id, "ConversationID": f"AG_SIM_{receipt}",
+            "TransactionID": receipt, "ResultParameters": {"ResultParameter": [
+                {"Key": "TransactionAmount", "Value": float(amount)},
+                {"Key": "TransactionReceipt", "Value": receipt},
+                {"Key": "ReceiverPartyPublicName", "Value": f"{msisdn} - {booking.guest.full_name.upper()}"},
+            ]},
+        }})
+        refund.refresh_from_db()
+        return refund
+    urls = b2c_urls()
+    try:
+        data = DarajaClient().b2c_payment(
+            originator_id=refund.originator_conversation_id, phone=msisdn, amount=amount,
+            remarks=f"Refund {booking.reference}", result_url=urls["result"], timeout_url=urls["timeout"],
+            occasion=reason,
+        )
+    except DarajaError as exc:
+        refund.status = B2CRefund.Status.FAILED
+        refund.result_desc = str(exc)[:255]
+        refund.raw_response = exc.response
+        refund.completed_at = timezone.now()
+        refund.save()
+        raise MpesaError(f"M-Pesa refund failed: {exc}") from exc
+    refund.conversation_id = data.get("ConversationID", "")
+    refund.result_desc = (data.get("ResponseDescription") or "")[:255]
+    refund.raw_response = data
+    refund.save()
+    return refund
+
+
+def _result_params(result):
+    params = (result.get("ResultParameters") or {}).get("ResultParameter") or []
+    if isinstance(params, dict):
+        params = [params]
+    return {p.get("Key"): p.get("Value") for p in params if isinstance(p, dict)}
+
+
+def process_b2c_result(payload):
+    """Safaricom's B2C result callback. Records the refund on the folio exactly once."""
+    from .models import B2CRefund
+
+    result = (payload or {}).get("Result")
+    if not isinstance(result, dict):
+        raise ValueError("Not a B2C result payload")
+    originator = result.get("OriginatorConversationID")
+    conversation = result.get("ConversationID")
+    with transaction.atomic():
+        refund = (B2CRefund.objects.select_for_update().filter(originator_conversation_id=originator).first()
+                  or B2CRefund.objects.select_for_update().filter(conversation_id=conversation).first())
+        if refund is None:
+            logger.warning("B2C result for unknown request %s / %s", originator, conversation)
+            return None
+        refund.raw_result = payload
+        if refund.status == B2CRefund.Status.SUCCESS:
+            refund.save(update_fields=["raw_result"])
+            return refund  # duplicate callback
+        code = str(result.get("ResultCode", ""))
+        refund.result_code = code
+        refund.result_desc = str(result.get("ResultDesc", ""))[:255]
+        refund.completed_at = timezone.now()
+        if code == "0":
+            params = _result_params(result)
+            refund.status = B2CRefund.Status.SUCCESS
+            refund.transaction_id = str(result.get("TransactionID") or params.get("TransactionReceipt") or "")[:30]
+            refund.receiver_name = str(params.get("ReceiverPartyPublicName") or "")[:120]
+            refund.save()
+            payment = record_payment(
+                booking=refund.booking, amount=refund.amount, method=Payment.Method.MPESA,
+                reference=refund.transaction_id, payer_phone=refund.phone, kind=Payment.Kind.REFUND,
+                notes=f"M-Pesa refund: {refund.reason}" + (" (SIMULATED)" if refund.is_simulated else ""),
+                user=refund.requested_by, skip_duplicate_check=True,
+                enforce_limits=False,  # Safaricom has already sent the money: always record it
+            )
+            refund.payment = payment
+            refund.save(update_fields=["payment"])
+        else:
+            refund.status = B2CRefund.Status.FAILED
+            refund.save()
+    return refund
+
+
+def process_b2c_timeout(payload):
+    """Safaricom could not complete the request in time: mark failed so staff can retry."""
+    from .models import B2CRefund
+
+    result = (payload or {}).get("Result") or {}
+    refund = B2CRefund.objects.filter(
+        originator_conversation_id=result.get("OriginatorConversationID"), status=B2CRefund.Status.PENDING
+    ).first()
+    if refund:
+        refund.status = B2CRefund.Status.FAILED
+        refund.result_desc = "M-Pesa timed out before completing the refund. Check the M-Pesa statement, then retry."
+        refund.raw_result = payload
+        refund.completed_at = timezone.now()
+        refund.save()
+    return refund

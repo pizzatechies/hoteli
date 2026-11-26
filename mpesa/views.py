@@ -96,6 +96,71 @@ def c2b_confirmation(request, token):
     return JsonResponse({"ResultCode": 0, "ResultDesc": "Success"})
 
 
+@csrf_exempt
+@require_POST
+def b2c_result(request, token):
+    _check_token(token)
+    payload = _read_json(request)
+    log = MpesaCallbackLog.objects.create(kind=MpesaCallbackLog.Kind.B2C_RESULT, payload=payload,
+                                          remote_addr=_client_ip(request))
+    try:
+        refund = services.process_b2c_result(payload)
+        log.processed = refund is not None
+        log.note = (f"Refund {refund.originator_conversation_id}: {refund.get_status_display()}" if refund
+                    else "Unknown refund request")[:255]
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Error processing B2C result")
+        log.error = repr(exc)
+    log.save()
+    return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+
+@csrf_exempt
+@require_POST
+def b2c_timeout(request, token):
+    _check_token(token)
+    payload = _read_json(request)
+    log = MpesaCallbackLog.objects.create(kind=MpesaCallbackLog.Kind.B2C_TIMEOUT, payload=payload,
+                                          remote_addr=_client_ip(request))
+    try:
+        refund = services.process_b2c_timeout(payload)
+        log.processed = True
+        log.note = "Refund timed out" if refund else "No pending refund"
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Error processing B2C timeout")
+        log.error = repr(exc)
+    log.save()
+    return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+
+@role_required(*P.FINANCE)
+@require_POST
+def refund_start(request):
+    booking = get_object_or_404(Booking, pk=request.POST.get("booking"))
+    try:
+        refund = services.initiate_refund(
+            booking=booking, phone=request.POST.get("phone", ""), amount=request.POST.get("amount") or 0,
+            reason=request.POST.get("reason", ""), user=request.user,
+        )
+    except services.MpesaError as exc:
+        messages.error(request, str(exc))
+    else:
+        if refund.status == refund.Status.SUCCESS:
+            messages.success(request, f"Refunded KES {refund.amount:,.0f} to {refund.phone} ({refund.transaction_id}).")
+        else:
+            messages.info(request, f"Refund of KES {refund.amount:,.0f} sent to M-Pesa. It will show here once Safaricom confirms.")
+    return redirect("bookings:detail", pk=booking.pk)
+
+
+@role_required(*P.FINANCE, *P.FRONT_DESK)
+def refund_list(request):
+    from .models import B2CRefund
+
+    qs = B2CRefund.objects.select_related("booking__guest", "requested_by", "payment")
+    return render(request, "mpesa/refund_list.html", {"page": Paginator(qs, 30).get_page(request.GET.get("page")),
+                                                      "enabled": services.refunds_enabled()})
+
+
 # ------------------------------------------------------------------------------ status polling (public)
 def _tx_json(tx):
     return {

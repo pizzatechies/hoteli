@@ -135,6 +135,8 @@ class MpesaCallbackLog(models.Model):
         STK = "STK", "STK push result"
         C2B_VALIDATION = "C2B_VALIDATION", "C2B validation"
         C2B_CONFIRMATION = "C2B_CONFIRMATION", "C2B confirmation"
+        B2C_RESULT = "B2C_RESULT", "Refund (B2C) result"
+        B2C_TIMEOUT = "B2C_TIMEOUT", "Refund (B2C) timeout"
 
     kind = models.CharField(max_length=20, choices=Kind.choices)
     payload = models.JSONField(null=True, blank=True)
@@ -149,3 +151,41 @@ class MpesaCallbackLog(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} @ {self.received_at:%Y-%m-%d %H:%M:%S}"
+
+
+class B2CRefund(models.Model):
+    """A refund sent from the business to a guest's M-Pesa (Daraja B2C)."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Sending"
+        SUCCESS = "SUCCESS", "Refunded"
+        FAILED = "FAILED", "Failed"
+
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    booking = models.ForeignKey("bookings.Booking", on_delete=models.PROTECT, related_name="mpesa_refunds")
+    phone = models.CharField(max_length=15)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reason = models.CharField(max_length=100)
+    status = models.CharField(max_length=8, choices=Status.choices, default=Status.PENDING, db_index=True)
+    originator_conversation_id = models.CharField(max_length=60, unique=True)
+    conversation_id = models.CharField(max_length=80, blank=True, db_index=True)
+    transaction_id = models.CharField("M-Pesa code", max_length=30, blank=True)
+    receiver_name = models.CharField(max_length=120, blank=True)
+    result_code = models.CharField(max_length=20, blank=True)
+    result_desc = models.CharField(max_length=255, blank=True)
+    is_simulated = models.BooleanField(default=False)
+    raw_response = models.JSONField(null=True, blank=True)
+    raw_result = models.JSONField(null=True, blank=True)
+    payment = models.OneToOneField("bookings.Payment", null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="mpesa_refund")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                     related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "M-Pesa refund (B2C)"
+
+    def __str__(self):
+        return f"Refund KES {self.amount} to {self.phone} [{self.status}]"

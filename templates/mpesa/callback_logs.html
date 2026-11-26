@@ -2,11 +2,7 @@
 {% block title %}Callback log{% endblock %}
 {% block page_title %}M-Pesa callback log{% endblock %}
 {% block content %}
-<ul class="nav nav-pills mb-3">
-  <li class="nav-item"><a class="nav-link" href="{% url 'mpesa:list' %}">STK push</a></li>
-  <li class="nav-item"><a class="nav-link" href="{% url 'mpesa:c2b_list' %}">Paybill (C2B)</a></li>
-  <li class="nav-item"><a class="nav-link active" href="{% url 'mpesa:callback_logs' %}">Callback log</a></li>
-</ul>
+{% include "mpesa/_tabs.html" with active="logs" %}
 <form class="row g-2 mb-3" method="get"><div class="col-md-3"><select name="kind" class="form-select" onchange="this.form.submit()"><option value="">All callbacks</option>{% for v, l in kinds %}<option value="{{ v }}" {% if kind == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div></form>
 <div class="accordion" id="logs">
 {% for log in page %}
