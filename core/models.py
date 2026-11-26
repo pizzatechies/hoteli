@@ -61,6 +61,10 @@ class HotelSettings(models.Model):
         default=False,
         help_text="Let front desk check guests out with an unpaid balance (managers can always override).",
     )
+    require_two_factor_for_managers = models.BooleanField(
+        "Require two-step login for managers and admins", default=False,
+        help_text="Managers and administrators must set up an authenticator app before using the system.",
+    )
     require_guest_id_at_checkin = models.BooleanField(
         default=True, help_text="Require an ID/passport number before check-in."
     )

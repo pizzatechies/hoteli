@@ -1,0 +1,74 @@
+{% extends "base_staff.html" %}
+{% block title %}Two-step login{% endblock %}
+{% block page_title %}Account security{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-xl-7">
+    {% if required %}<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Your hotel requires two-step login for managers and administrators. Set it up below to continue.</div>{% endif %}
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+    {% if recovery_codes %}
+    <div class="card border-warning mb-3"><div class="card-header bg-warning-subtle">Your recovery codes – save them now</div><div class="card-body">
+      <p class="small">Each code works once if you lose your phone. They won't be shown again. Print them or keep them in a password manager.</p>
+      <div class="row row-cols-2 g-2 font-monospace fs-5">{% for c in recovery_codes %}<div class="col"><span class="badge text-bg-light border w-100 py-2">{{ c }}</span></div>{% endfor %}</div>
+      <button type="button" class="btn btn-sm btn-outline-secondary mt-3" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    </div></div>
+    {% endif %}
+
+    {% if device.confirmed %}
+    <div class="card mb-3"><div class="card-body d-flex align-items-center gap-3">
+      <i class="bi bi-shield-check fs-1 text-success"></i>
+      <div><div class="fw-semibold">Two-step login is on</div>
+        <div class="small text-body-secondary">Turned on {{ device.confirmed_at|date:"d M Y" }} · {{ device.recovery_codes|length }} recovery code{{ device.recovery_codes|length|pluralize }} left</div></div>
+    </div></div>
+    <div class="row g-3">
+      <div class="col-md-6"><div class="card h-100"><div class="card-header">New recovery codes</div><div class="card-body">
+        <p class="small text-body-secondary">Replaces all your old recovery codes.</p>
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="regenerate"><button class="btn btn-outline-primary">Create new codes</button></form>
+      </div></div></div>
+      <div class="col-md-6"><div class="card h-100"><div class="card-header">Turn off</div><div class="card-body">
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="disable">
+          <input name="code" class="form-control mb-2" inputmode="numeric" placeholder="Current 6-digit code" required>
+          <button class="btn btn-outline-danger" {% if required %}disabled title="Required by your hotel"{% endif %}>Turn off two-step login</button>
+        </form>
+      </div></div></div>
+    </div>
+    {% else %}
+    <div class="card"><div class="card-header">Set up two-step login</div><div class="card-body">
+      <ol class="mb-3">
+        <li>Install an authenticator app on your phone: Google Authenticator, Microsoft Authenticator, Authy or similar.</li>
+        <li>In the app, choose <em>Add account → Scan a QR code</em> and scan this code:</li>
+      </ol>
+      <div class="d-flex flex-wrap gap-4 align-items-center mb-3">
+        <div id="qrcode" class="p-2 bg-white border rounded" data-uri="{{ otp_uri }}"></div>
+        <div class="small">Can't scan? Enter this key manually:<br><code class="fs-6 user-select-all">{{ device.secret }}</code><br><span class="text-body-secondary">Type: time-based · 6 digits</span></div>
+      </div>
+      <form method="post" class="row g-2 align-items-end" style="max-width: 420px">{% csrf_token %}
+        <input type="hidden" name="action" value="confirm">
+        <div class="col-7"><label class="form-label" for="code">3. Enter the 6-digit code it shows</label>
+          <input id="code" name="code" class="form-control form-control-lg" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></div>
+        <div class="col-5"><button class="btn btn-primary btn-lg w-100">Turn on</button></div>
+      </form>
+    </div></div>
+    {% endif %}
+  </div>
+  <div class="col-xl-5"><div class="card"><div class="card-header">Recent sign-ins</div>
+    <ul class="list-group list-group-flush">
+      {% for a in recent_attempts %}<li class="list-group-item d-flex justify-content-between small"><span>{% if a.successful %}<i class="bi bi-check-circle text-success"></i> Signed in{% else %}<i class="bi bi-x-circle text-danger"></i> Failed attempt{% endif %} · {{ a.ip_address|default:"unknown IP" }}</span><span class="text-body-secondary">{{ a.created_at|date:"d M H:i" }}</span></li>
+      {% empty %}<li class="list-group-item small text-body-secondary">No sign-ins recorded yet.</li>{% endfor %}
+    </ul>
+    <div class="card-body small text-body-secondary border-top">After {{ lockout_attempts|default:"5" }} wrong passwords an account is locked for 15 minutes.</div>
+  </div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if not device.confirmed %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  (function () {
+    var el = document.getElementById("qrcode");
+    if (el && window.QRCode) new QRCode(el, { text: el.dataset.uri, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+  })();
+</script>
+{% endif %}
+{% endblock %}

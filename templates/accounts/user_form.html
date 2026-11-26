@@ -9,6 +9,15 @@
       <div class="mt-3 d-flex gap-2"><button class="btn btn-primary">Save</button><a href="{% url 'accounts:users' %}" class="btn btn-light">Cancel</a></div>
     </form>
   </div></div></div>
+  {% if staff %}
+  <div class="col-lg-5 order-lg-last"><div class="card mb-3"><div class="card-header">Two-step login</div><div class="card-body">
+    {% if staff.two_factor and staff.two_factor.confirmed %}
+      <p class="small mb-2"><i class="bi bi-shield-check text-success"></i> On since {{ staff.two_factor.confirmed_at|date:"d M Y" }}.</p>
+      <form method="post" action="{% url 'accounts:user_reset_two_factor' staff.pk %}" onsubmit="return confirm('Reset two-step login for {{ staff.username }}? Use this if they lost their phone.')">{% csrf_token %}
+        <button class="btn btn-sm btn-outline-danger">Reset (lost phone)</button></form>
+    {% else %}<p class="small text-body-secondary mb-0">Not set up. Staff turn it on from their menu → Two-step login.</p>{% endif %}
+  </div></div></div>
+  {% endif %}
   {% if pw_form %}
   <div class="col-lg-5"><div class="card"><div class="card-header">Set a new password</div><div class="card-body">
     <form method="post">{% csrf_token %}

@@ -89,6 +89,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "accounts.middleware.TwoFactorEnforcementMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -143,6 +144,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LOGIN_URL = "accounts:login"
+LOGIN_LOCKOUT_ATTEMPTS = int(env("LOGIN_LOCKOUT_ATTEMPTS", "5"))
+LOGIN_LOCKOUT_MINUTES = int(env("LOGIN_LOCKOUT_MINUTES", "15"))
+# Staff are signed out after this much inactivity.
+SESSION_COOKIE_AGE = int(env("SESSION_IDLE_MINUTES", "240")) * 60
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SECURE_REFERRER_POLICY = "same-origin"
 LOGIN_REDIRECT_URL = "core:dashboard"
 LOGOUT_REDIRECT_URL = "accounts:login"
 

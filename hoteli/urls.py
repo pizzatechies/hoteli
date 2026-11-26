@@ -1,7 +1,11 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from accounts.views import admin_login_redirect
 from core import views as core_views
+
+# The Django admin signs in through the staff login, so lockout and two-step login apply there too.
+admin.site.login = admin_login_redirect
 
 urlpatterns = [
     path("django-admin/", admin.site.urls),

@@ -38,3 +38,33 @@ class User(AbstractUser):
 
     def get_role_display_name(self):
         return self.Role(self.effective_role).label
+
+
+class LoginAttempt(models.Model):
+    """Every staff sign-in attempt, used to lock out password guessing."""
+
+    username = models.CharField(max_length=150, db_index=True)
+    ip_address = models.CharField(max_length=64, blank=True, db_index=True)
+    successful = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.username} {'ok' if self.successful else 'failed'} {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class TwoFactorDevice(models.Model):
+    """Authenticator-app (TOTP) second factor for a staff account."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="two_factor")
+    secret = models.CharField(max_length=64)
+    confirmed = models.BooleanField(default=False)
+    last_used_step = models.BigIntegerField(default=0, help_text="Prevents re-using a code.")
+    recovery_codes = models.JSONField(default=list, blank=True, help_text="SHA-256 hashes of unused codes.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"2FA for {self.user}"

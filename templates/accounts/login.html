@@ -23,7 +23,9 @@
     <div class="card shadow-lg border-0">
       <div class="card-body p-4">
         <h2 class="h5 mb-3">Staff sign in</h2>
-        {% if form.errors %}<div class="alert alert-danger py-2">Incorrect username or password.</div>{% endif %}
+        {% if locked_minutes %}<div class="alert alert-danger py-2"><i class="bi bi-shield-lock"></i> Too many failed sign-ins. For your security this account is locked for about {{ locked_minutes }} minute{{ locked_minutes|pluralize }}.</div>
+        {% elif form.errors %}<div class="alert alert-danger py-2">Incorrect username or password.</div>{% endif %}
+        {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} py-2">{{ message }}</div>{% endfor %}
         <form method="post">{% csrf_token %}
           <input type="hidden" name="next" value="{{ next }}">
           <div class="mb-3"><label class="form-label" for="id_username">Username</label>{{ form.username }}</div>
