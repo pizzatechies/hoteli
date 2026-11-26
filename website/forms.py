@@ -10,6 +10,7 @@ class SearchForm(BootstrapMixin, forms.Form):
     check_out = forms.DateField(widget=DateInput(), label="Check-out")
     adults = forms.IntegerField(min_value=1, max_value=10, initial=2)
     children = forms.IntegerField(min_value=0, max_value=10, initial=0)
+    promo = forms.CharField(max_length=30, required=False, label="Promo code")
 
     def __init__(self, *args, today=None, **kwargs):
         super().__init__(*args, **kwargs)

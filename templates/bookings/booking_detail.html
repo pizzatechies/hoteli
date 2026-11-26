@@ -52,7 +52,8 @@
           <dt class="col-5">Room</dt><dd class="col-7">{{ booking.room.number }} · {{ booking.room.room_type }} {% status_badge booking.room "hk_status" %}</dd>
           <dt class="col-5">Dates</dt><dd class="col-7">{{ booking.check_in_date|date:"d M Y" }} → {{ booking.check_out_date|date:"d M Y" }} ({{ booking.nights }} night{{ booking.nights|pluralize }})</dd>
           <dt class="col-5">Guests</dt><dd class="col-7">{{ booking.adults }} adult{{ booking.adults|pluralize }}{% if booking.children %}, {{ booking.children }} child{{ booking.children|pluralize:"ren" }}{% endif %}</dd>
-          <dt class="col-5">Rate</dt><dd class="col-7">KES {{ booking.rate|money }} / night</dd>
+          <dt class="col-5">Rate</dt><dd class="col-7">KES {{ booking.rate|money }} / night{% if booking.discount_label %}<div class="small text-success"><i class="bi bi-tag"></i> {{ booking.discount_label }} (was {{ booking.base_rate|money }})</div>{% endif %}</dd>
+          {% if booking.corporate_account %}<dt class="col-5">Company</dt><dd class="col-7">{{ booking.corporate_account }}</dd>{% endif %}
           <dt class="col-5">Source</dt><dd class="col-7">{{ booking.get_source_display }}</dd>
           {% if booking.actual_check_in %}<dt class="col-5">Checked in</dt><dd class="col-7">{{ booking.actual_check_in|date:"d M Y H:i" }}</dd>{% endif %}
           {% if booking.actual_check_out %}<dt class="col-5">Checked out</dt><dd class="col-7">{{ booking.actual_check_out|date:"d M Y H:i" }}</dd>{% endif %}

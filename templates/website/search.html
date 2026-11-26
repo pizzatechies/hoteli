@@ -20,7 +20,9 @@
         <div class="d-flex justify-content-between flex-wrap gap-2">
           <div><h2 class="h4 mb-1">{{ r.room_type.name }}</h2>
             <div class="small text-body-secondary">Sleeps {{ r.room_type.max_adults }} adult{{ r.room_type.max_adults|pluralize }}{% if r.room_type.max_children %} + {{ r.room_type.max_children }} child{{ r.room_type.max_children|pluralize:"ren" }}{% endif %} · {{ r.room_type.bed_type }}</div></div>
-          <div class="text-end"><div class="price-tag fs-4">KES {{ r.total|money:0 }}</div><div class="small text-body-secondary">{{ r.nights }} night{{ r.nights|pluralize }} · avg {{ r.nightly|money:0 }}/night</div></div>
+          <div class="text-end">{% if r.discount_label %}<div class="small text-body-secondary text-decoration-line-through">KES {{ r.base_total|money:0 }}</div>{% endif %}
+            <div class="price-tag fs-4">KES {{ r.total|money:0 }}</div><div class="small text-body-secondary">{{ r.nights }} night{{ r.nights|pluralize }} · avg {{ r.nightly|money:0 }}/night</div>
+            {% if r.discount_label %}<span class="badge text-bg-success mt-1"><i class="bi bi-tag"></i> {{ r.discount_label }}</span>{% elif r.promo_error and search_form.cleaned_data.promo %}<div class="small text-danger mt-1">{{ r.promo_error }}</div>{% endif %}</div>
         </div>
         <div class="my-2">{% for a in r.room_type.amenity_list|slice:":6" %}<span class="amenity">{{ a }}</span>{% endfor %}</div>
         <div class="mt-auto d-flex justify-content-between align-items-center flex-wrap gap-2">

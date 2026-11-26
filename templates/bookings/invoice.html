@@ -13,9 +13,9 @@
   </div>
   <div class="row mb-4 small">
     <div class="col-6"><div class="text-uppercase text-body-secondary fw-semibold mb-1">Billed to</div>
-      <strong>{{ booking.guest }}</strong>{% if booking.guest.company %}<br>{{ booking.guest.company }}{% endif %}<br>{{ booking.guest.phone }}{% if booking.guest.email %}<br>{{ booking.guest.email }}{% endif %}</div>
+      {% if booking.corporate_account %}<strong>{{ booking.corporate_account }}</strong>{% if booking.corporate_account.kra_pin %}<br>KRA PIN {{ booking.corporate_account.kra_pin }}{% endif %}<br>Guest: {{ booking.guest }}{% else %}<strong>{{ booking.guest }}</strong>{% if booking.guest.company %}<br>{{ booking.guest.company }}{% endif %}{% endif %}<br>{{ booking.guest.phone }}{% if booking.guest.email %}<br>{{ booking.guest.email }}{% endif %}</div>
     <div class="col-6 text-end"><div class="text-uppercase text-body-secondary fw-semibold mb-1">Stay</div>
-      Booking {{ booking.reference }}<br>Room {{ booking.room.number }} – {{ booking.room.room_type }}<br>{{ booking.check_in_date|date:"d M Y" }} → {{ booking.check_out_date|date:"d M Y" }} ({{ booking.nights }} night{{ booking.nights|pluralize }})</div>
+      Booking {{ booking.reference }}<br>{% if booking.discount_label %}<span class="text-success">{{ booking.discount_label }}</span><br>{% endif %}Room {{ booking.room.number }} – {{ booking.room.room_type }}<br>{{ booking.check_in_date|date:"d M Y" }} → {{ booking.check_out_date|date:"d M Y" }} ({{ booking.nights }} night{{ booking.nights|pluralize }})</div>
   </div>
   <table class="table table-sm">
     <thead class="table-light"><tr><th>Date</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit</th><th class="text-end">Amount (KES)</th></tr></thead>

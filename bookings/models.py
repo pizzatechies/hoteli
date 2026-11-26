@@ -138,6 +138,13 @@ class Booking(models.Model):
         "Rate per night", max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0"))]
     )
     deposit_required = models.DecimalField(max_digits=12, decimal_places=2, default=ZERO)
+    base_rate = models.DecimalField("Rate before discount", max_digits=10, decimal_places=2, null=True, blank=True)
+    discount_label = models.CharField(max_length=100, blank=True)
+    discount_total = models.DecimalField(max_digits=12, decimal_places=2, default=ZERO)
+    promo_code = models.ForeignKey("rooms.PromoCode", null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="bookings")
+    corporate_account = models.ForeignKey("rooms.CorporateAccount", null=True, blank=True, on_delete=models.PROTECT,
+                                          related_name="bookings")
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.CONFIRMED, db_index=True)
     source = models.CharField(max_length=12, choices=Source.choices, default=Source.WALK_IN)
     special_requests = models.TextField(blank=True)

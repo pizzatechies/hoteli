@@ -60,6 +60,9 @@ class BookingForm(BootstrapMixin, forms.Form):
         max_digits=10, decimal_places=2, min_value=Decimal("0"), required=False,
         label="Rate per night", help_text="Leave blank to use the room type rate for these dates.",
     )
+    promo_code = forms.CharField(max_length=30, required=False, label="Promo code",
+                                 help_text="Applied when the rate is left blank.")
+    corporate_account = forms.ModelChoiceField(queryset=None, required=False, label="Company (corporate rate)")
     source = forms.ChoiceField(choices=Booking.Source.choices, initial=Booking.Source.WALK_IN)
     status = forms.ChoiceField(
         choices=[(Booking.Status.CONFIRMED, "Confirmed"), (Booking.Status.PENDING, "Pending (tentative)")],
@@ -71,10 +74,13 @@ class BookingForm(BootstrapMixin, forms.Form):
     def __init__(self, *args, editing=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.editing = editing
+        from rooms.models import CorporateAccount
+
+        self.fields["corporate_account"].queryset = CorporateAccount.objects.filter(is_active=True)
         self.fields["room"].label_from_instance = lambda r: f"{r.number} – {r.room_type.name}"
         if editing is not None:
             for name in ("guest", "first_name", "last_name", "phone", "email", "id_type", "id_number",
-                         "nationality", "status"):
+                         "nationality", "status", "promo_code", "corporate_account"):
                 self.fields.pop(name)
             if editing.status == Booking.Status.CHECKED_IN:
                 self.fields["check_in_date"].disabled = True

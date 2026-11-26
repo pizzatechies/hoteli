@@ -150,6 +150,14 @@ class Command(BaseCommand):
                     Room.objects.create(number=number, room_type=rt, floor=spec["floor"])
             self.stdout.write(self.style.SUCCESS(f"Created {RoomType.objects.count()} room types and {Room.objects.count()} rooms."))
 
+        from rooms.models import CorporateAccount, PromoCode, StayDiscount
+
+        if not PromoCode.objects.exists():
+            PromoCode.objects.create(code="KARIBU10", percent_off=Decimal("10"), description="Welcome offer: 10% off")
+            StayDiscount.objects.create(min_nights=7, percent_off=Decimal("10"))
+            CorporateAccount.objects.create(name="Mlimani Logistics Ltd (demo)", percent_off=Decimal("12"),
+                                            contact_name="Travel desk", email="travel@example.com")
+
         if not MenuCategory.objects.exists():
             for order, (cat_name, items) in enumerate(MENU.items()):
                 cat = MenuCategory.objects.create(name=cat_name, display_order=order)

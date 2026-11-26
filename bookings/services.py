@@ -54,7 +54,7 @@ def available_rooms(check_in, check_out, room_type=None, exclude_booking=None, p
     return rooms.select_related("room_type").order_by("room_type__display_order", "floor", "number")
 
 
-def availability_by_room_type(check_in, check_out, adults=1, children=0, public=True):
+def availability_by_room_type(check_in, check_out, adults=1, children=0, public=True, promo_code=""):
     """List of dicts for each room type that can host the party, with free rooms and a quote."""
     expire_pending_holds()
     nights = (check_out - check_in).days
@@ -67,14 +67,19 @@ def availability_by_room_type(check_in, check_out, adults=1, children=0, public=
     for rt in types:
         if adults > rt.max_adults or adults + children > rt.max_occupancy:
             continue
-        total = rt.quote(check_in, check_out)
+        from rooms.pricing import quote
+
+        price = quote(rt, check_in, check_out, promo_code=promo_code, website=public)
         rooms = counts.get(rt.id, [])
         results.append({
             "room_type": rt,
             "available": len(rooms),
             "rooms": rooms,
-            "total": total,
-            "nightly": (total / nights).quantize(Decimal("0.01")) if nights else rt.base_rate,
+            "total": price.total,
+            "base_total": price.base_total,
+            "discount_label": price.discount_label,
+            "promo_error": price.promo_error,
+            "nightly": price.nightly,
             "nights": nights,
         })
     return results
@@ -131,14 +136,28 @@ def deposit_for(total, percent):
 def create_booking(*, guest, room, check_in, check_out, adults=1, children=0, rate=None,
                    source=Booking.Source.WALK_IN, status=Booking.Status.CONFIRMED,
                    special_requests="", internal_notes="", user=None, deposit_required=ZERO,
-                   expires_at=None):
+                   expires_at=None, price=None):
+    """`price` is a rooms.pricing.Quote; its discount is applied unless an explicit `rate` is given."""
     if guest.is_blacklisted:
         raise BookingError(f"{guest} is blacklisted: {guest.blacklist_reason or 'see guest notes'}.")
     with transaction.atomic():
         room = validate_stay(room, check_in, check_out, adults, children)
+        discount = {}
+        if rate is None and price is not None:
+            rate = price.nightly
+            discount = {"base_rate": price.base_nightly, "discount_label": price.discount_label[:100],
+                        "discount_total": price.discount_total, "promo_code": price.promo,
+                        "corporate_account": price.corporate}
+            if price.promo:
+                from rooms.pricing import use_promo
+
+                use_promo(price.promo)
+        elif price is not None and price.corporate:
+            discount = {"corporate_account": price.corporate}
         if rate is None:
             rate = default_rate(room.room_type, check_in, check_out)
         booking = Booking.objects.create(
+            **discount,
             guest=guest, room=room, check_in_date=check_in, check_out_date=check_out,
             adults=adults, children=children, rate=rate, source=source, status=status,
             special_requests=special_requests, internal_notes=internal_notes, created_by=user,

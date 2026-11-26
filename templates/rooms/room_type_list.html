@@ -22,4 +22,22 @@
     <td class="text-end"><a href="{% url 'rooms:season_edit' s.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a></td></tr>
   {% empty %}<tr><td colspan="7" class="text-body-secondary small">No seasonal rates. Base rates apply all year. Add peak or low-season prices here – they're used automatically for new bookings and online quotes.</td></tr>{% endfor %}</tbody>
 </table></div></div>
+
+<div class="row g-3 mt-1">
+  <div class="col-xl-6"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Promo codes</span><a href="{% url 'rooms:promo_create' %}" class="small">+ Add</a></div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Code</th><th>Discount</th><th>Valid</th><th>Used</th><th></th></tr></thead><tbody>
+    {% for p in promos %}<tr class="{% if not p.is_active %}text-body-tertiary{% endif %}"><td class="fw-semibold">{{ p.code }}{% if not p.on_website %} <span class="badge text-bg-light">staff only</span>{% endif %}<div class="small text-body-secondary">{{ p.description }}</div></td>
+      <td>{{ p.summary }}{% if p.min_nights > 1 %}<div class="small text-body-secondary">min {{ p.min_nights }} nights</div>{% endif %}</td>
+      <td class="small">{% if p.valid_from or p.valid_until %}{{ p.valid_from|date:"d M"|default:"…" }} – {{ p.valid_until|date:"d M Y"|default:"…" }}{% else %}Always{% endif %}</td>
+      <td>{{ p.times_used }}{% if p.max_uses %}/{{ p.max_uses }}{% endif %}</td><td class="text-end"><a href="{% url 'rooms:promo_edit' p.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="small text-body-secondary">No promo codes. Create one, e.g. <code>KARIBU10</code> for 10% off.</td></tr>{% endfor %}
+    </tbody></table></div></div></div>
+  <div class="col-xl-3 col-md-6"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Long-stay discounts</span><a href="{% url 'rooms:stay_discount_create' %}" class="small">+ Add</a></div>
+    <ul class="list-group list-group-flush">{% for d in stay_discounts %}<li class="list-group-item d-flex justify-content-between align-items-center small {% if not d.is_active %}text-body-tertiary{% endif %}"><span>{{ d.min_nights }}+ nights: <strong>{{ d.percent_off|floatformat:"-2" }}% off</strong>{% if d.room_type %} · {{ d.room_type }}{% endif %}</span><a href="{% url 'rooms:stay_discount_edit' d.pk %}">Edit</a></li>
+    {% empty %}<li class="list-group-item small text-body-secondary">None. Applied automatically when set.</li>{% endfor %}</ul></div></div>
+  <div class="col-xl-3 col-md-6"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Corporate accounts</span><a href="{% url 'rooms:company_create' %}" class="small">+ Add</a></div>
+    <ul class="list-group list-group-flush">{% for c in companies %}<li class="list-group-item d-flex justify-content-between align-items-center small {% if not c.is_active %}text-body-tertiary{% endif %}"><span><strong>{{ c.name }}</strong> · {{ c.percent_off|floatformat:"-2" }}% off<div class="text-body-secondary">{{ c.booking_count }} booking{{ c.booking_count|pluralize }}</div></span><a href="{% url 'rooms:company_edit' c.pk %}">Edit</a></li>
+    {% empty %}<li class="list-group-item small text-body-secondary">No companies yet.</li>{% endfor %}</ul></div></div>
+</div>
+<p class="small text-body-secondary mt-2 mb-0">Only the single best discount applies to a booking (promo code, corporate rate or long-stay), so discounts never stack.</p>
 {% endblock %}

@@ -111,7 +111,7 @@ def search(request):
     if form.is_bound and form.is_valid():
         d = form.cleaned_data
         results = booking_services.availability_by_room_type(
-            d["check_in"], d["check_out"], d["adults"], d["children"], public=True
+            d["check_in"], d["check_out"], d["adults"], d["children"], public=True, promo_code=d.get("promo", "")
         )
     return render(request, "website/search.html", {
         "search_form": form, "results": results, "booking_enabled": hotel.website_booking_enabled,
@@ -135,7 +135,10 @@ def book(request, pk):
         messages.error(request, f"{rt.name} sleeps at most {rt.max_adults} adults / {rt.max_occupancy} guests.")
         return redirect(reverse("website:search") + "?" + request.GET.urlencode())
     nights = (co - ci).days
-    total = rt.quote(ci, co)
+    from rooms.pricing import quote
+
+    price = quote(rt, ci, co, promo_code=s.get("promo", ""), website=True)
+    total = price.total
     deposit = booking_services.deposit_for(total, hotel.deposit_percent) if hotel.website_require_deposit else 0
 
     form = GuestDetailsForm(request.POST or None)
@@ -163,7 +166,7 @@ def book(request, pk):
                     booking = booking_services.create_booking(
                         guest=guest, room=room, check_in=ci, check_out=co, adults=adults, children=children,
                         source=Booking.Source.WEBSITE, status=status, special_requests=g["special_requests"],
-                        deposit_required=deposit, expires_at=expires,
+                        deposit_required=deposit, expires_at=expires, price=price,
                     )
                 break
             except BookingError as exc:
@@ -177,7 +180,7 @@ def book(request, pk):
         form.add_error(None, error or "We could not complete the booking. Please try again.")
     return render(request, "website/book.html", {
         "rt": rt, "form": form, "check_in": ci, "check_out": co, "adults": adults, "children": children,
-        "nights": nights, "total": total, "deposit": deposit, "query": request.GET.urlencode(),
+        "nights": nights, "total": total, "deposit": deposit, "query": request.GET.urlencode(), "price": price,
     })
 
 

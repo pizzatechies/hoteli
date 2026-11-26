@@ -131,6 +131,13 @@ def booking_create(request):
             selected_guest = Guest.objects.filter(pk=form.data.get("guest")).first()
         if form.is_valid():
             d = form.cleaned_data
+            from rooms.pricing import quote
+
+            price = quote(d["room"].room_type, d["check_in_date"], d["check_out_date"],
+                          promo_code=d.get("promo_code", ""), corporate=d.get("corporate_account"))
+            if d.get("promo_code") and price.promo_error and d["rate"] is None:
+                form.add_error("promo_code", price.promo_error)
+                return render(request, "bookings/booking_form.html", {"form": form, "selected_guest": selected_guest})
             try:
                 with transaction.atomic():
                     guest = d["guest"] or Guest.objects.create(
@@ -142,7 +149,7 @@ def booking_create(request):
                         guest=guest, room=d["room"], check_in=d["check_in_date"], check_out=d["check_out_date"],
                         adults=d["adults"], children=d["children"], rate=d["rate"], source=d["source"],
                         status=d["status"], special_requests=d["special_requests"],
-                        internal_notes=d["internal_notes"], user=request.user,
+                        internal_notes=d["internal_notes"], user=request.user, price=price,
                     )
             except BookingError as exc:
                 form.add_error(None, str(exc))

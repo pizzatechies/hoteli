@@ -37,7 +37,13 @@
           <li><i class="bi bi-moon"></i> {{ nights }} night{{ nights|pluralize }}</li>
           <li><i class="bi bi-people"></i> {{ adults }} adult{{ adults|pluralize }}{% if children %}, {{ children }} child{{ children|pluralize:"ren" }}{% endif %}</li>
         </ul>
+        {% if price.discount_total %}
+        <div class="d-flex justify-content-between border-top pt-3"><span>Room rate</span><span>KES {{ price.base_total|money:0 }}</span></div>
+        <div class="d-flex justify-content-between text-success small"><span><i class="bi bi-tag"></i> {{ price.discount_label }}</span><span>− KES {{ price.discount_total|money:0 }}</span></div>
+        <div class="d-flex justify-content-between"><span>Total stay</span><strong>KES {{ total|money:0 }}</strong></div>
+        {% else %}
         <div class="d-flex justify-content-between border-top pt-3"><span>Total stay</span><strong>KES {{ total|money:0 }}</strong></div>
+        {% endif %}
         {% if deposit %}<div class="d-flex justify-content-between text-success"><span>Due now (deposit)</span><strong>KES {{ deposit|money:0 }}</strong></div>{% endif %}
         <div class="small text-body-secondary mt-2">Prices include VAT &amp; levies.</div>
         <a href="{% url 'website:search' %}?{{ query }}" class="small d-inline-block mt-3">&larr; Change room or dates</a>

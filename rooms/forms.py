@@ -2,7 +2,7 @@ from django import forms
 
 from core.forms import BootstrapMixin, DateInput
 
-from .models import Room, RoomType, SeasonalRate
+from .models import CorporateAccount, PromoCode, Room, RoomType, SeasonalRate, StayDiscount
 
 
 class RoomTypeForm(BootstrapMixin, forms.ModelForm):
@@ -30,3 +30,24 @@ class SeasonalRateForm(BootstrapMixin, forms.ModelForm):
         model = SeasonalRate
         fields = ["room_type", "name", "start_date", "end_date", "rate", "priority"]
         widgets = {"start_date": DateInput(), "end_date": DateInput()}
+
+
+class PromoCodeForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = PromoCode
+        fields = ["code", "description", "percent_off", "amount_off", "room_types", "min_nights", "valid_from",
+                  "valid_until", "max_uses", "on_website", "is_active"]
+        widgets = {"valid_from": DateInput(), "valid_until": DateInput(),
+                   "room_types": forms.CheckboxSelectMultiple}
+
+
+class StayDiscountForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = StayDiscount
+        fields = ["min_nights", "percent_off", "room_type", "is_active"]
+
+
+class CorporateAccountForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = CorporateAccount
+        fields = ["name", "percent_off", "contact_name", "email", "phone", "kra_pin", "notes", "is_active"]

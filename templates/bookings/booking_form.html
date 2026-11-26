@@ -48,6 +48,8 @@
         {% include "partials/field.html" with field=form.children %}
         {% include "partials/field.html" with field=form.room %}
         {% include "partials/field.html" with field=form.rate %}
+        {% if form.promo_code %}{% include "partials/field.html" with field=form.promo_code %}
+        {% include "partials/field.html" with field=form.corporate_account %}{% endif %}
         <div class="col-12"><div id="availability-info" class="small text-body-secondary"></div></div>
         {% include "partials/field.html" with field=form.source %}
         {% if form.status %}{% include "partials/field.html" with field=form.status %}{% endif %}
