@@ -1,6 +1,12 @@
 .venv
 .git
+.github
+.devcontainer
 db.sqlite3
 staticfiles
+_site
+backups
 __pycache__
+*.pyc
 .env
+branding/fonts

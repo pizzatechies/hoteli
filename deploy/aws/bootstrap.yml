@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Hoteli one-time setup. Lets GitHub Actions deploy Hoteli to this AWS account without
+  stored keys (OpenID Connect), and creates the container registry for the app image.
+  Create this stack once, in the region you want to host in.
+
+Parameters:
+  GitHubRepo:
+    Type: String
+    Default: pizzatechies/hoteli
+    AllowedPattern: "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    Description: The GitHub repository (owner/name) that may deploy.
+  DeployBranch:
+    Type: String
+    Default: claude/adoring-davinci-kzwlbq
+    Description: Only workflows running on this branch can deploy (use your default branch).
+  CreateGitHubOIDCProvider:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+    Description: Choose "false" if this AWS account already has the token.actions.githubusercontent.com identity provider.
+
+Conditions:
+  CreateProvider: !Equals [!Ref CreateGitHubOIDCProvider, "true"]
+
+Resources:
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+  Repository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: hoteli
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Keep the 20 most recent images",
+          "selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":20},
+          "action":{"type":"expire"}}]}
+
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: hoteli-github-deploy
+      Description: Assumed by GitHub Actions to deploy Hoteli.
+      MaxSessionDuration: 7200
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateProvider
+                - !Ref GitHubOIDCProvider
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubRepo}:ref:refs/heads/${DeployBranch}
+      ManagedPolicyArns:
+        # Everything except IAM and Organizations; IAM is granted below for hoteli-* roles only.
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/PowerUserAccess
+      Policies:
+        - PolicyName: hoteli-manage-own-roles
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:PassRole
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:UpdateRole
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:ListAttachedRolePolicies
+                  - iam:ListRoleTags
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/hoteli-*
+              - Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: "*"
+
+Outputs:
+  DeployRoleArn:
+    Description: Save this as the GitHub repository variable AWS_DEPLOY_ROLE_ARN.
+    Value: !GetAtt DeployRole.Arn
+  Region:
+    Description: Save this as the GitHub repository variable AWS_REGION.
+    Value: !Ref AWS::Region
+  RepositoryUri:
+    Description: Container registry for the Hoteli image.
+    Value: !GetAtt Repository.RepositoryUri

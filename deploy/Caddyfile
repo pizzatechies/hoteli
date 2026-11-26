@@ -1,0 +1,5 @@
+# Automatic HTTPS (Let's Encrypt) for the single-server setup in docker-compose.yml.
+{$DOMAIN} {
+	encode gzip zstd
+	reverse_proxy web:8000
+}

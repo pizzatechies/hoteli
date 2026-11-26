@@ -81,6 +81,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "core.middleware.HealthCheckMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -111,12 +112,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "hoteli.wsgi.application"
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
-}
+if env("DATABASE_URL") or not env("DB_HOST"):
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=600,
+        )
+    }
+else:  # discrete settings, e.g. injected by AWS ECS from Secrets Manager
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "HOST": env("DB_HOST"),
+            "PORT": env("DB_PORT", "5432"),
+            "NAME": env("DB_NAME", "hoteli"),
+            "USER": env("DB_USER", "hoteli"),
+            "PASSWORD": env("DB_PASSWORD", ""),
+            "CONN_MAX_AGE": 600,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {"sslmode": env("DB_SSLMODE", "require")},
+        }
+    }
 
 AUTH_USER_MODEL = "accounts.User"
 AUTH_PASSWORD_VALIDATORS = [
@@ -169,7 +185,9 @@ CACHES = {
 # Security (production)
 # --------------------------------------------------------------------------------------
 if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Behind CloudFront use HTTP_CLOUDFRONT_FORWARDED_PROTO; behind Caddy/nginx/Render the default.
+    SECURE_PROXY_SSL_HEADER = (env("SECURE_PROXY_SSL_HEADER_NAME", "HTTP_X_FORWARDED_PROTO"), "https")
+    SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

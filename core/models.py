@@ -184,3 +184,18 @@ def log_action(user, action, obj=None, description=""):
         object_id=str(obj.pk) if obj is not None and obj.pk is not None else "",
         description=description or (str(obj) if obj is not None else ""),
     )
+
+
+class DailyJobRun(models.Model):
+    """Marks a once-a-day background job as done, so it runs once even with several workers."""
+
+    name = models.CharField(max_length=60)
+    run_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("name", "run_date")]
+        ordering = ["-run_date", "name"]
+
+    def __str__(self):
+        return f"{self.name} {self.run_date}"

@@ -191,31 +191,73 @@ Payments with an unknown account number appear under **M-Pesa → Paybill (C2B)*
 
 ## Scheduled jobs
 
-The system also runs these tasks on demand when people use it, so nothing breaks without cron. For accurate night-by-night figures, schedule them:
+One background worker runs every scheduled job. On AWS and in docker compose it runs automatically as the `jobs` container:
 
-| Command | When | What it does |
+```bash
+python manage.py run_jobs
+```
+
+| Job | When | What it does |
 | --- | --- | --- |
-| `python manage.py night_audit` | Daily, around 23:30 | Posts room charges, marks no-shows and extends overstays |
-| `python manage.py expire_holds` | Every 5 minutes | Releases unpaid online bookings |
-| `python manage.py mpesa_check_pending` | Every 2 minutes | Resolves STK pushes whose callback was missed |
+| Night audit | Daily at `NIGHT_AUDIT_TIME` (default 23:30) | Posts room charges, marks no-shows and extends overstays |
+| Expire holds | Every 5 minutes | Releases unpaid online bookings |
+| M-Pesa check | Every 2 minutes | Resolves STK pushes whose callback was missed |
 
-Managers can also run the night audit from the dashboard.
+Every job is safe to run twice, and daily jobs are recorded so they run once a day even with several workers. The system also does these tasks on demand when people use it, and managers can run the night audit from the dashboard.
 
-## Deployment
+## Hosting on AWS
 
-**Render:** push this repository, then create a *Blueprint* from `render.yaml`. It creates a web service and a PostgreSQL database. Then set `SITE_URL`, `MPESA_CALLBACK_BASE_URL`, the `MPESA_*` keys, `DJANGO_ADMIN_USERNAME` and `DJANGO_ADMIN_PASSWORD`. `build.sh` runs migrations and creates the first admin.
+`deploy/aws/` contains everything needed for a production setup that GitHub Actions deploys automatically on every push:
 
-**Railway / Heroku-style hosts:** the `Procfile` runs migrations on release. Add a PostgreSQL database (`DATABASE_URL` is read automatically) and set the same variables.
+```
+CloudFront (free HTTPS, *.cloudfront.net or your domain)
+   └─ Application Load Balancer (only accepts traffic from CloudFront)
+        └─ ECS Fargate task: web container + background-jobs container
+             └─ RDS PostgreSQL 18 (private subnets, encrypted, daily backups for 7 days)
+Secrets Manager: Django key, admin password, database password, M-Pesa/email/SMS keys
+CloudWatch Logs: 30 days
+```
 
-**Docker:**
+**Cost:** roughly **US$55–70 a month** at the defaults. That covers one 0.5 vCPU / 1 GB container (about $18), the load balancer (about $20), a db.t4g.micro database with 20 GB (about $15), public IPv4 addresses (about $11), plus small amounts for CloudFront, Secrets Manager and logs. There's no NAT gateway, to keep the bill down. For a budget option, see *Single server* below.
+
+### One-time setup (about 10 minutes, then fully automatic)
+
+1. **Choose a region.** `eu-west-1` (Ireland) is the default. `af-south-1` (Cape Town) is closer to Kenya but must first be enabled under *Account → AWS Regions*.
+2. **Create the setup stack.** In the AWS Console go to **CloudFormation → Create stack → With new resources**, upload `deploy/aws/bootstrap.yml` and name the stack `hoteli-bootstrap`. Keep the defaults, unless your account already has the GitHub identity provider; if so, set *CreateGitHubOIDCProvider* to `false`. Tick the IAM acknowledgement and create the stack. This makes a deploy role for GitHub, with no stored keys, and an image registry.
+3. **Connect GitHub.** In the repository, open **Settings → Secrets and variables → Actions → Variables** and add:
+   - `AWS_DEPLOY_ROLE_ARN`: the *DeployRoleArn* output of the setup stack.
+   - `AWS_REGION`: the region you chose.
+4. **Deploy.** Open **Actions → Deploy to AWS → Run workflow**. The first run takes 20–30 minutes, because the database and CloudFront are being created. Later pushes deploy in about 5 minutes. The run summary lists your website and staff addresses.
+5. **Sign in.** Use username `admin`. The password is in Secrets Manager under `hoteli/prod/admin-password`; the run summary links to it. Change it after your first login.
+6. **Add your keys.** In Secrets Manager, edit `hoteli/prod/integrations` and fill in your M-Pesa (Daraja), email (SMTP) and SMS keys. Then run the workflow again with **Only restart the app** ticked. M-Pesa stays in simulation mode until real keys are added.
+
+**Optional repository variables:** `HOTELI_CUSTOM_DOMAIN` + `HOTELI_CERTIFICATE_ARN` (an ACM certificate in us-east-1; point the domain's CNAME at the *CloudFrontDomain* output), `MPESA_ENVIRONMENT` (`production` when going live), `MPESA_SHORTCODE`, `MPESA_TRANSACTION_TYPE`, `MPESA_TILL_NUMBER`, `EMAIL_HOST` (e.g. `email-smtp.eu-west-1.amazonaws.com` for Amazon SES), `DEFAULT_FROM_EMAIL`, `SMS_BACKEND` (`africastalking`), `SMS_USERNAME`, `SMS_SENDER_ID`, `HOTELI_DESIRED_COUNT`.
+
+**Safety built in:** the database has deletion protection and takes a final snapshot if it is ever removed. Deploys roll back automatically if the new version fails its health checks. Containers can't be reached except through CloudFront.
+
+### Single server (budget, about US$10–20 a month)
+
+On one AWS Lightsail or EC2 instance with Docker installed and a domain pointing at it:
 
 ```bash
-docker build -t hoteli .
+git clone https://github.com/pizzatechies/hoteli.git && cd hoteli
 ```
 
 ```bash
-docker run -p 8000:8000 -e SECRET_KEY=change-me -e ALLOWED_HOSTS=localhost hoteli
+cp .env.example .env
 ```
+
+Edit `.env` and set at least `DEBUG=False`, `SECRET_KEY`, `DOMAIN`, `DB_PASSWORD`, `DJANGO_ADMIN_USERNAME` and `DJANGO_ADMIN_PASSWORD`. Then start everything:
+
+```bash
+docker compose up -d --build
+```
+
+This runs the app, the background jobs, PostgreSQL, Caddy (which gets a free HTTPS certificate automatically) and a daily database backup into `./backups` that keeps 14 days.
+
+### Other hosts
+
+**Render:** create a *Blueprint* from `render.yaml`. **Railway / Heroku-style:** the `Procfile` runs migrations on release. **Any container host:** the `Dockerfile` serves the site with `web` (the default command) and runs the scheduler with `jobs`. Load balancers can use `/healthz/` as the health check.
 
 In production, always set `DEBUG=False`, a long `SECRET_KEY`, `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`, plus real SMTP settings so guests receive their confirmations.
 

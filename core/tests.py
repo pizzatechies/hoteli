@@ -220,3 +220,34 @@ class LoginScreenTests(HotelTestCase):
     def test_login_shows_powered_by_pizza_technologies(self):
         resp = self.client.get(reverse("accounts:login"))
         self.assertContains(resp, 'Powered by <strong class="text-white">Pizza Technologies</strong>', html=False)
+
+
+class InfrastructureTests(HotelTestCase):
+    def test_health_check_bypasses_host_and_https_checks(self):
+        from django.test import override_settings
+
+        with override_settings(ALLOWED_HOSTS=["hotel.example.com"], SECURE_SSL_REDIRECT=True):
+            resp = self.client.get("/healthz/", HTTP_HOST="10.42.0.17:8000")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content, b"ok")
+
+    def test_daily_job_runs_once_per_day_even_with_two_workers(self):
+        from core.management.commands.run_jobs import run_daily_once
+
+        calls = []
+        self.assertTrue(run_daily_once("demo_job", lambda: calls.append(1)))
+        self.assertFalse(run_daily_once("demo_job", lambda: calls.append(1)))
+        self.assertEqual(calls, [1])
+
+    def test_job_runner_single_pass(self):
+        import io
+
+        from django.core.management import call_command
+
+        self.make_booking(ci=-1, co=1, status="CHECKED_IN")
+        out = io.StringIO()
+        call_command("run_jobs", once=True, stdout=out)
+        self.assertIn("started", out.getvalue())
+        from bookings.models import NightAuditRun
+
+        self.assertTrue(NightAuditRun.objects.exists())

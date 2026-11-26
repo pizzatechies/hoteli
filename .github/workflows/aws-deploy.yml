@@ -1,0 +1,131 @@
+name: Deploy to AWS
+
+# Builds the container image, pushes it to Amazon ECR and deploys deploy/aws/hoteli.yml with
+# CloudFormation. Inactive until the repository variable AWS_DEPLOY_ROLE_ARN is set
+# (see "Hosting on AWS" in the README).
+#
+# Optional repository variables: AWS_REGION (default eu-west-1), AWS_STACK_NAME (default hoteli),
+# HOTELI_CUSTOM_DOMAIN + HOTELI_CERTIFICATE_ARN, MPESA_ENVIRONMENT, MPESA_SHORTCODE,
+# MPESA_TRANSACTION_TYPE, MPESA_TILL_NUMBER, EMAIL_HOST, DEFAULT_FROM_EMAIL, SMS_BACKEND,
+# SMS_USERNAME, SMS_SENDER_ID, HOTELI_DESIRED_COUNT.
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      restart_only:
+        description: Only restart the app (e.g. after editing secrets in Secrets Manager)
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: aws-deploy
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+  STACK_NAME: ${{ vars.AWS_STACK_NAME || 'hoteli' }}
+
+jobs:
+  deploy:
+    if: vars.AWS_DEPLOY_ROLE_ARN != '' && (github.event_name != 'push' || github.ref_name == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Restart the app
+        if: inputs.restart_only
+        run: |
+          cluster=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='ClusterName'].OutputValue" --output text)
+          aws ecs update-service --cluster "$cluster" --service hoteli-web --force-new-deployment > /dev/null
+          aws ecs wait services-stable --cluster "$cluster" --services hoteli-web
+          echo "Restarted: new settings and secrets are now in use." >> "$GITHUB_STEP_SUMMARY"
+
+      - id: ecr
+        if: ${{ !inputs.restart_only }}
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push the image
+        if: ${{ !inputs.restart_only }}
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          image="$REGISTRY/hoteli:${GITHUB_SHA}"
+          docker build --pull -t "$image" .
+          docker push "$image"
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+
+      - name: Clear a failed first attempt
+        if: ${{ !inputs.restart_only }}
+        run: |
+          status=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo NONE)
+          if [ "$status" = "ROLLBACK_COMPLETE" ]; then
+            echo "The first deployment failed earlier; removing the empty stack before retrying."
+            aws cloudformation delete-stack --stack-name "$STACK_NAME"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          fi
+
+      - name: Deploy the CloudFormation stack
+        if: ${{ !inputs.restart_only }}
+        env:
+          CUSTOM_DOMAIN: ${{ vars.HOTELI_CUSTOM_DOMAIN }}
+          CERTIFICATE_ARN: ${{ vars.HOTELI_CERTIFICATE_ARN }}
+          MPESA_ENVIRONMENT: ${{ vars.MPESA_ENVIRONMENT }}
+          MPESA_SHORTCODE: ${{ vars.MPESA_SHORTCODE }}
+          MPESA_TRANSACTION_TYPE: ${{ vars.MPESA_TRANSACTION_TYPE }}
+          MPESA_TILL_NUMBER: ${{ vars.MPESA_TILL_NUMBER }}
+          EMAIL_HOST: ${{ vars.EMAIL_HOST }}
+          DEFAULT_FROM_EMAIL: ${{ vars.DEFAULT_FROM_EMAIL }}
+          SMS_BACKEND: ${{ vars.SMS_BACKEND }}
+          SMS_USERNAME: ${{ vars.SMS_USERNAME }}
+          SMS_SENDER_ID: ${{ vars.SMS_SENDER_ID }}
+          DESIRED_COUNT: ${{ vars.HOTELI_DESIRED_COUNT }}
+        run: |
+          params=("ImageUri=$IMAGE")
+          add() { if [ -n "$2" ]; then params+=("$1=$2"); fi; }
+          add CustomDomain "$CUSTOM_DOMAIN"
+          add CertificateArn "$CERTIFICATE_ARN"
+          add MpesaEnvironment "$MPESA_ENVIRONMENT"
+          add MpesaShortcode "$MPESA_SHORTCODE"
+          add MpesaTransactionType "$MPESA_TRANSACTION_TYPE"
+          add MpesaTillNumber "$MPESA_TILL_NUMBER"
+          add EmailHost "$EMAIL_HOST"
+          add DefaultFromEmail "$DEFAULT_FROM_EMAIL"
+          add SmsBackend "$SMS_BACKEND"
+          add SmsUsername "$SMS_USERNAME"
+          add SmsSenderId "$SMS_SENDER_ID"
+          add DesiredCount "$DESIRED_COUNT"
+          aws cloudformation deploy \
+            --stack-name "$STACK_NAME" \
+            --template-file deploy/aws/hoteli.yml \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides "${params[@]}" \
+            --tags app=hoteli
+
+      - name: Show the addresses
+        if: ${{ !inputs.restart_only }}
+        run: |
+          {
+            echo "### Hoteli is deployed"
+            echo ""
+            aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+              --query "Stacks[0].Outputs[].[OutputKey,OutputValue]" --output text \
+              | awk -F'\t' '{ printf "- **%s**: %s\n", $1, $2 }'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Explain a failed deployment
+        if: failure() && !inputs.restart_only
+        run: |
+          echo "Recent stack events (newest first):"
+          aws cloudformation describe-stack-events --stack-name "$STACK_NAME" --max-items 25 \
+            --query "StackEvents[?contains(ResourceStatus, 'FAILED')].[LogicalResourceId,ResourceStatusReason]" --output text || true

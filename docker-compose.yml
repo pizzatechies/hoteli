@@ -1,0 +1,90 @@
+# Budget single-server hosting (e.g. AWS Lightsail or one EC2 instance):
+#   1. Point your domain's DNS A record at the server.
+#   2. Create .env (see .env.example) with at least DOMAIN, SECRET_KEY, DB_PASSWORD and DJANGO_ADMIN_*.
+#   3. docker compose up -d --build
+# Caddy fetches a free HTTPS certificate automatically. Daily database dumps are written to ./backups
+# and kept for 14 days.
+x-app-env: &app-env
+  DB_HOST: db
+  DB_NAME: hoteli
+  DB_USER: hoteli
+  DB_PASSWORD: ${DB_PASSWORD}
+  DB_SSLMODE: disable
+  SITE_URL: https://${DOMAIN}
+  MPESA_CALLBACK_BASE_URL: https://${DOMAIN}
+  ALLOWED_HOSTS: ${DOMAIN}
+  CSRF_TRUSTED_ORIGINS: https://${DOMAIN}
+  SECURE_PROXY_SSL_HEADER_NAME: HTTP_X_FORWARDED_PROTO
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hoteli
+      POSTGRES_USER: hoteli
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hoteli -d hoteli"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    image: hoteli:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      <<: *app-env
+    command: ["web"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  jobs:
+    image: hoteli:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      <<: *app-env
+      RUN_MIGRATIONS: "false"
+    command: ["jobs"]
+    depends_on:
+      - web
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./backups:/backups
+      - ./deploy/backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
